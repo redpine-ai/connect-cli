@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/redpine-ai/connect-cli/internal/command/auth"
 	"github.com/redpine-ai/connect-cli/internal/command/collections"
@@ -28,11 +29,12 @@ var (
 
 func NewRootCmd() *cobra.Command {
 	root := &cobra.Command{
-		Use:           "connect",
-		Short:         "Connect CLI — MCP client for the Connect platform",
-		SilenceUsage:  true,
-		SilenceErrors: true,
-		Version:       version.Full(),
+		Use:                        "connect",
+		Short:                      "Connect CLI — MCP client for the Connect platform",
+		SilenceUsage:               true,
+		SilenceErrors:              true,
+		SuggestionsMinimumDistance: 2,
+		Version:                    version.Full(),
 	}
 
 	root.SetVersionTemplate("{{.Version}}\n")
@@ -81,7 +83,59 @@ func Execute() {
 			}
 			os.Exit(cliErr.ExitCode)
 		}
-		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+		// For unknown command errors, include Cobra's suggestions
+		errMsg := err.Error()
+		fmt.Fprintf(os.Stderr, "Error: %s\n", errMsg)
+		if suggestions := findSuggestions(root, errMsg); suggestions != "" {
+			fmt.Fprintln(os.Stderr, suggestions)
+		}
 		os.Exit(1)
 	}
+}
+
+// findSuggestions extracts a misspelled command name from the error and
+// returns suggestion text using Cobra's built-in SuggestionsFor.
+func findSuggestions(root *cobra.Command, errMsg string) string {
+	// Cobra errors look like: `unknown command "logie" for "connect"`
+	// Extract the unknown command name
+	const prefix = "unknown command \""
+	idx := strings.Index(errMsg, prefix)
+	if idx < 0 {
+		return ""
+	}
+	rest := errMsg[idx+len(prefix):]
+	end := strings.Index(rest, "\"")
+	if end < 0 {
+		return ""
+	}
+	unknown := rest[:end]
+
+	// Also check for subcommand context: `unknown command "logie" for "connect auth"`
+	// Find the parent command
+	cmd := root
+	const forPrefix = "\" for \""
+	forIdx := strings.Index(rest, forPrefix)
+	if forIdx >= 0 {
+		parentPart := rest[forIdx+len(forPrefix):]
+		parentEnd := strings.Index(parentPart, "\"")
+		if parentEnd >= 0 {
+			parentName := parentPart[:parentEnd]
+			// Walk to the parent command
+			parts := strings.Fields(parentName)
+			for _, p := range parts[1:] { // skip root name
+				for _, sub := range cmd.Commands() {
+					if sub.Name() == p {
+						cmd = sub
+						break
+					}
+				}
+			}
+		}
+	}
+
+	suggestions := cmd.SuggestionsFor(unknown)
+	if len(suggestions) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("\nDid you mean:\n  %s", strings.Join(suggestions, "\n  "))
 }
