@@ -77,10 +77,11 @@ func NewCallCmd(f *factory.Factory) *cobra.Command {
 				}
 			}
 
-			client := f.MCPClient(token)
-			if err := client.Initialize(); err != nil {
+			client, sc, err := f.MCPClientWithSession(token)
+			if err != nil {
 				return &output.CLIError{Code: "server_error", Message: err.Error(), ExitCode: output.ExitServer}
 			}
+			defer sc.Save(client.SessionID())
 
 			if cacheErr != nil {
 				freshTools, err := client.ListTools()

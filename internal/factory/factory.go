@@ -84,6 +84,35 @@ func New() *Factory {
 	return f
 }
 
+// MCPClientWithSession creates an MCP client and attempts to reuse a cached
+// session ID. On a cold start it calls Initialize and caches the new session.
+func (f *Factory) MCPClientWithSession(token string) (*mcp.Client, *mcp.SessionCache, error) {
+	cfg, _ := f.Config()
+	serverURL := f.ServerFlag
+	if serverURL == "" {
+		serverURL = os.Getenv("CONNECT_SERVER_URL")
+	}
+	if serverURL == "" {
+		serverURL = cfg.ServerURL
+	}
+
+	client := mcp.NewClient(serverURL, token, f.InsecureFlag)
+	sc := mcp.DefaultSessionCache(serverURL)
+
+	// Try cached session
+	if sid := sc.Load(); sid != "" {
+		client.SetSessionID(sid)
+		return client, sc, nil
+	}
+
+	// Cold start — initialize
+	if err := client.Initialize(); err != nil {
+		return nil, nil, err
+	}
+	sc.Save(client.SessionID())
+	return client, sc, nil
+}
+
 func NewTest(ios *output.IOStreams, cfg *config.Config, kr config.Keyring) *Factory {
 	f := &Factory{}
 	f.IOStreams = func() *output.IOStreams { return ios }

@@ -18,10 +18,11 @@ func NewListCmd(f *factory.Factory) *cobra.Command {
 					Hint: "Run 'connect auth login' or set CONNECT_API_KEY", ExitCode: output.ExitAuth,
 				}
 			}
-			client := f.MCPClient(token)
-			if err := client.Initialize(); err != nil {
+			client, sc, err := f.MCPClientWithSession(token)
+			if err != nil {
 				return &output.CLIError{Code: "server_error", Message: err.Error(), ExitCode: output.ExitServer}
 			}
+			defer sc.Save(client.SessionID())
 			result, err := client.CallTool("list_collections", map[string]interface{}{})
 			if err != nil {
 				return &output.CLIError{Code: "server_error", Message: err.Error(), ExitCode: output.ExitServer}

@@ -21,10 +21,11 @@ func NewListCmd(f *factory.Factory) *cobra.Command {
 					Hint: "Run 'connect auth login' or set CONNECT_API_KEY", ExitCode: output.ExitAuth,
 				}
 			}
-			client := f.MCPClient(token)
-			if err := client.Initialize(); err != nil {
+			client, sc, err := f.MCPClientWithSession(token)
+			if err != nil {
 				return &output.CLIError{Code: "server_error", Message: err.Error(), ExitCode: output.ExitServer}
 			}
+			defer sc.Save(client.SessionID())
 			allTools, err := client.ListTools()
 			if err != nil {
 				return &output.CLIError{Code: "server_error", Message: err.Error(), ExitCode: output.ExitServer}
@@ -33,7 +34,16 @@ func NewListCmd(f *factory.Factory) *cobra.Command {
 			tc.Save(allTools)
 			upstream := filterUpstreamTools(allTools)
 			ios := f.IOStreams()
-			ios.WriteJSON(output.NewSuccessEnvelope(upstream))
+			if ios.OutputMode(f.JSONFlag != "", f.PrettyFlag) == output.ModePretty {
+				headers := []string{"TOOL", "DESCRIPTION"}
+				var rows [][]string
+				for _, t := range upstream {
+					rows = append(rows, []string{t.Name, t.Description})
+				}
+				output.RenderTable(ios.Out, headers, rows)
+			} else {
+				ios.WriteJSON(output.NewSuccessEnvelope(upstream))
+			}
 			return nil
 		},
 	}
