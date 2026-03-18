@@ -34,6 +34,24 @@ type RPCError struct {
 	Message string `json:"message"`
 }
 
+// HTTPError represents a categorized HTTP error with status-specific messaging.
+type HTTPError struct {
+	Status     int
+	RetryAfter string
+	Body       string
+}
+
+func (e *HTTPError) Error() string {
+	if e.Status == 429 {
+		msg := "Too many requests"
+		if e.RetryAfter != "" {
+			msg += " (retry after " + e.RetryAfter + "s)"
+		}
+		return msg
+	}
+	return fmt.Sprintf("server error (HTTP %d)", e.Status)
+}
+
 type Transport struct {
 	url       string
 	token     string
@@ -145,6 +163,15 @@ func (t *Transport) doPost(body []byte) ([]byte, error) {
 		t.sessionID = sid
 	}
 
+	if resp.StatusCode == 429 {
+		retryAfter := resp.Header.Get("Retry-After")
+		errBody, _ := io.ReadAll(resp.Body)
+		return nil, &HTTPError{Status: 429, RetryAfter: retryAfter, Body: string(errBody)}
+	}
+	if resp.StatusCode >= 500 {
+		errBody, _ := io.ReadAll(resp.Body)
+		return nil, &HTTPError{Status: resp.StatusCode, Body: string(errBody)}
+	}
 	if resp.StatusCode >= 400 {
 		errBody, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(errBody))

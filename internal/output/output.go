@@ -22,15 +22,24 @@ type IOStreams struct {
 	Out    io.Writer
 	ErrOut io.Writer
 	tty    bool
+	Color  bool
 }
 
 // New creates an IOStreams wired to real stdout/stderr with TTY detection.
 func New() *IOStreams {
 	isTTY := term.IsTerminal(int(os.Stdout.Fd()))
+	colorEnabled := isTTY
+	if os.Getenv("NO_COLOR") != "" {
+		colorEnabled = false
+	}
+	if os.Getenv("CLICOLOR_FORCE") != "" {
+		colorEnabled = true
+	}
 	return &IOStreams{
 		Out:    os.Stdout,
 		ErrOut: os.Stderr,
 		tty:    isTTY,
+		Color:  colorEnabled,
 	}
 }
 
