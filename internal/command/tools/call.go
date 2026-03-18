@@ -96,8 +96,7 @@ func NewCallCmd(f *factory.Factory) *cobra.Command {
 			}
 
 			ios := f.IOStreams()
-			ios.WriteJSON(output.NewSuccessEnvelope(result))
-			return nil
+			return ios.WriteMCPResult(result, f.JSONFlag != "", f.PrettyFlag)
 		},
 	}
 

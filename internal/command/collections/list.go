@@ -28,8 +28,7 @@ func NewListCmd(f *factory.Factory) *cobra.Command {
 				return &output.CLIError{Code: "server_error", Message: err.Error(), ExitCode: output.ExitServer}
 			}
 			ios := f.IOStreams()
-			ios.WriteJSON(output.NewSuccessEnvelope(result))
-			return nil
+			return ios.WriteMCPResult(result, f.JSONFlag != "", f.PrettyFlag)
 		},
 	}
 }

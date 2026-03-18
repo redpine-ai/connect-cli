@@ -3,6 +3,7 @@ package output
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 
@@ -94,3 +95,51 @@ func (ios *IOStreams) WriteJSON(env *Envelope) error {
 	enc := json.NewEncoder(ios.Out)
 	return enc.Encode(env)
 }
+
+// WriteResult outputs data according to the current output mode.
+// In JSON mode, wraps in a success envelope. In pretty mode, calls prettyFn
+// to render human-readable output. If prettyFn is nil, falls back to JSON.
+func (ios *IOStreams) WriteResult(data interface{}, jsonFlag, prettyFlag bool, prettyFn func(w io.Writer)) error {
+	if prettyFn != nil && ios.OutputMode(jsonFlag, prettyFlag) == ModePretty {
+		prettyFn(ios.Out)
+		return nil
+	}
+	return ios.WriteJSON(NewSuccessEnvelope(data))
+}
+
+// WriteMCPResult outputs an MCP tool call result. In pretty mode, extracts
+// text content blocks and prints them directly. In JSON mode, wraps in envelope.
+func (ios *IOStreams) WriteMCPResult(result interface{}, jsonFlag, prettyFlag bool) error {
+	type contentBlock struct {
+		Type string `json:"type"`
+		Text string `json:"text,omitempty"`
+	}
+	type toolResult struct {
+		Content []contentBlock `json:"content"`
+	}
+
+	if ios.OutputMode(jsonFlag, prettyFlag) == ModePretty {
+		// Marshal and re-parse to extract content blocks generically
+		data, err := json.Marshal(result)
+		if err != nil {
+			return ios.WriteJSON(NewSuccessEnvelope(result))
+		}
+		var tr toolResult
+		if err := json.Unmarshal(data, &tr); err == nil && len(tr.Content) > 0 {
+			for _, block := range tr.Content {
+				if block.Type == "text" && block.Text != "" {
+					fmt.Fprintln(ios.Out, block.Text)
+				}
+			}
+			return nil
+		}
+		// Not a tool result shape — fall back to indented JSON
+		var indented bytes.Buffer
+		json.Indent(&indented, data, "", "  ")
+		fmt.Fprintln(ios.Out, indented.String())
+		return nil
+	}
+	return ios.WriteJSON(NewSuccessEnvelope(result))
+}
+
+
