@@ -3,6 +3,7 @@ module github.com/redpine-ai/connect-cli
 go 1.26.1
 
 require (
+	github.com/agnivade/levenshtein v1.2.1
 	github.com/spf13/cobra v1.10.2
 	github.com/zalando/go-keyring v0.2.6
 	golang.org/x/term v0.41.0
