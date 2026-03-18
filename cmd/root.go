@@ -4,6 +4,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/redpine-ai/connect-cli/internal/command/auth"
+	"github.com/redpine-ai/connect-cli/internal/command/collections"
+	"github.com/redpine-ai/connect-cli/internal/command/search"
+	"github.com/redpine-ai/connect-cli/internal/factory"
 	"github.com/redpine-ai/connect-cli/internal/version"
 	"github.com/spf13/cobra"
 )
@@ -38,8 +42,22 @@ func NewRootCmd() *cobra.Command {
 	pf.BoolVarP(&flagQuiet, "quiet", "q", false, "Suppress all output except errors")
 	pf.BoolVar(&flagInsecure, "insecure", false, "Allow non-HTTPS server URLs")
 
-	// --json can be used with or without a value
 	root.PersistentFlags().Lookup("json").NoOptDefVal = "*"
+
+	f := factory.New()
+	root.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+		f.APIKeyFlag = flagAPIKey
+		f.ServerFlag = flagServer
+		f.JSONFlag = flagJSON
+		f.JQFlag = flagJQ
+		f.PrettyFlag = flagPretty
+		f.QuietFlag = flagQuiet
+		f.InsecureFlag = flagInsecure
+	}
+
+	root.AddCommand(auth.NewAuthCmd(f))
+	root.AddCommand(collections.NewCollectionsCmd(f))
+	root.AddCommand(search.NewSearchCmd(f))
 
 	return root
 }
