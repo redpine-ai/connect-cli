@@ -6,8 +6,10 @@ import (
 
 	"github.com/redpine-ai/connect-cli/internal/command/auth"
 	"github.com/redpine-ai/connect-cli/internal/command/collections"
+	"github.com/redpine-ai/connect-cli/internal/command/docs"
 	"github.com/redpine-ai/connect-cli/internal/command/search"
 	"github.com/redpine-ai/connect-cli/internal/command/tools"
+	"github.com/redpine-ai/connect-cli/internal/command/update"
 	"github.com/redpine-ai/connect-cli/internal/factory"
 	"github.com/redpine-ai/connect-cli/internal/version"
 	"github.com/spf13/cobra"
@@ -60,6 +62,8 @@ func NewRootCmd() *cobra.Command {
 	root.AddCommand(collections.NewCollectionsCmd(f))
 	root.AddCommand(search.NewSearchCmd(f))
 	root.AddCommand(tools.NewToolsCmd(f))
+	root.AddCommand(docs.NewDocsCmd(f))
+	root.AddCommand(update.NewUpdateCmd(f))
 
 	return root
 }
