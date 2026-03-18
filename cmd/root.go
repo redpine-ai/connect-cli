@@ -11,6 +11,7 @@ import (
 	"github.com/redpine-ai/connect-cli/internal/command/tools"
 	"github.com/redpine-ai/connect-cli/internal/command/update"
 	"github.com/redpine-ai/connect-cli/internal/factory"
+	"github.com/redpine-ai/connect-cli/internal/output"
 	"github.com/redpine-ai/connect-cli/internal/version"
 	"github.com/spf13/cobra"
 )
@@ -71,6 +72,15 @@ func NewRootCmd() *cobra.Command {
 func Execute() {
 	root := NewRootCmd()
 	if err := root.Execute(); err != nil {
+		ios := output.New()
+		if cliErr, ok := err.(*output.CLIError); ok {
+			if ios.OutputMode(false, false) == output.ModeJSON {
+				ios.WriteJSON(output.NewErrorEnvelope(cliErr))
+			} else {
+				cliErr.WritePretty(ios.ErrOut)
+			}
+			os.Exit(cliErr.ExitCode)
+		}
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 		os.Exit(1)
 	}
