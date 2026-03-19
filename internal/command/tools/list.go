@@ -29,8 +29,13 @@ func NewListCmd(f *factory.Factory) *cobra.Command {
 				return &output.CLIError{Code: "server_error", Message: err.Error(), ExitCode: output.ExitServer}
 			}
 			defer sc.Save(client.SessionID())
-			allTools, err := client.ListTools()
-			if err != nil {
+
+			var allTools []mcp.Tool
+			if err := f.RunWithRefresh(client, sc, func(c *mcp.Client) error {
+				var callErr error
+				allTools, callErr = c.ListTools()
+				return callErr
+			}); err != nil {
 				return &output.CLIError{Code: "server_error", Message: err.Error(), ExitCode: output.ExitServer}
 			}
 			tc := f.ToolCache()

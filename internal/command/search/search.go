@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/redpine-ai/connect-cli/internal/factory"
+	"github.com/redpine-ai/connect-cli/internal/mcp"
 	"github.com/redpine-ai/connect-cli/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -42,8 +43,12 @@ func NewSearchCmd(f *factory.Factory) *cobra.Command {
 			if limit > 0 {
 				searchArgs["limit"] = limit
 			}
-			result, err := client.CallTool("search", searchArgs)
-			if err != nil {
+			var result *mcp.ToolCallResult
+			if err := f.RunWithRefresh(client, sc, func(c *mcp.Client) error {
+				var callErr error
+				result, callErr = c.CallTool("search", searchArgs)
+				return callErr
+			}); err != nil {
 				return &output.CLIError{Code: "server_error", Message: err.Error(), ExitCode: output.ExitServer}
 			}
 			ios := f.IOStreams()

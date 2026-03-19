@@ -130,6 +130,54 @@ func (f *Factory) MCPClientWithSession(token string) (*mcp.Client, *mcp.SessionC
 	return client, sc, nil
 }
 
+// RunWithRefresh executes fn. If it returns a 401 error, refreshes the OAuth
+// token, rebuilds the client, and retries once. This handles expired tokens
+// transparently for any MCP operation.
+func (f *Factory) RunWithRefresh(
+	client *mcp.Client,
+	sc *mcp.SessionCache,
+	fn func(*mcp.Client) error,
+) error {
+	err := fn(client)
+	if err == nil {
+		return nil
+	}
+	errMsg := strings.ToLower(err.Error())
+	if !strings.Contains(errMsg, "401") && !strings.Contains(errMsg, "unauthorized") {
+		return err
+	}
+
+	// Token expired — try refresh
+	newToken, refreshErr := config.RefreshOAuthToken(f.Keyring())
+	if refreshErr != nil || newToken == "" {
+		return err // can't refresh, return original error
+	}
+
+	// Rebuild client with new token
+	cfg, cfgErr := f.Config()
+	if cfgErr != nil {
+		cfg = &config.Config{ServerURL: config.DefaultServerURL}
+	}
+	serverURL := f.ServerFlag
+	if serverURL == "" {
+		serverURL = os.Getenv("CONNECT_SERVER_URL")
+	}
+	if serverURL == "" {
+		serverURL = cfg.ServerURL
+	}
+
+	newClient := mcp.NewClient(serverURL, newToken)
+	sc.Delete() // clear stale session
+	if initErr := newClient.Initialize(); initErr != nil {
+		return initErr
+	}
+	sc.Save(newClient.SessionID())
+
+	// Copy new state back to caller's client
+	*client = *newClient
+	return fn(client)
+}
+
 func NewTest(ios *output.IOStreams, cfg *config.Config, kr config.Keyring) *Factory {
 	f := &Factory{}
 	f.IOStreams = func() *output.IOStreams { return ios }

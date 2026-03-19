@@ -111,14 +111,18 @@ func NewCallCmd(f *factory.Factory) *cobra.Command {
 			defer sc.Save(client.SessionID())
 
 			if cacheErr != nil {
-				freshTools, err := client.ListTools()
-				if err == nil {
+				freshTools, listErr := client.ListTools()
+				if listErr == nil {
 					tc.Save(freshTools)
 				}
 			}
 
-			result, err := client.CallTool(toolName, toolArgs)
-			if err != nil {
+			var result *mcp.ToolCallResult
+			if err := f.RunWithRefresh(client, sc, func(c *mcp.Client) error {
+				var callErr error
+				result, callErr = c.CallTool(toolName, toolArgs)
+				return callErr
+			}); err != nil {
 				return &output.CLIError{Code: "tool_error", Message: err.Error(), ExitCode: output.ExitServer}
 			}
 

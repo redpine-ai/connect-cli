@@ -2,6 +2,7 @@ package collections
 
 import (
 	"github.com/redpine-ai/connect-cli/internal/factory"
+	"github.com/redpine-ai/connect-cli/internal/mcp"
 	"github.com/redpine-ai/connect-cli/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -23,8 +24,13 @@ func NewCollectionsCmd(f *factory.Factory) *cobra.Command {
 				return &output.CLIError{Code: "server_error", Message: err.Error(), ExitCode: output.ExitServer}
 			}
 			defer sc.Save(client.SessionID())
-			result, err := client.CallTool("list_collections", map[string]interface{}{})
-			if err != nil {
+
+			var result *mcp.ToolCallResult
+			if err := f.RunWithRefresh(client, sc, func(c *mcp.Client) error {
+				var callErr error
+				result, callErr = c.CallTool("list_collections", map[string]interface{}{})
+				return callErr
+			}); err != nil {
 				return &output.CLIError{Code: "server_error", Message: err.Error(), ExitCode: output.ExitServer}
 			}
 			ios := f.IOStreams()
