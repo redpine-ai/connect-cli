@@ -1,6 +1,9 @@
 package auth
 
 import (
+	"strings"
+
+	"github.com/redpine-ai/connect-cli/internal/config"
 	"github.com/redpine-ai/connect-cli/internal/factory"
 	"github.com/redpine-ai/connect-cli/internal/output"
 	"github.com/spf13/cobra"
@@ -32,12 +35,28 @@ func NewStatusCmd(f *factory.Factory) *cobra.Command {
 				masked = token[:7] + "..." + token[len(token)-4:]
 			}
 
-			ios.WriteJSON(output.NewSuccessEnvelope(map[string]interface{}{
+			// Detect token type
+			tokenType := "oauth"
+			if strings.HasPrefix(token, "sk_live_") || strings.HasPrefix(token, "sk_test_") {
+				tokenType = "api_key"
+			}
+
+			result := map[string]interface{}{
 				"authenticated": true,
 				"source":        source,
+				"type":          tokenType,
 				"token":         masked,
-			}))
-			return nil
+			}
+
+			// Check if refresh token is available (OAuth only)
+			if tokenType == "oauth" {
+				creds, err := config.LoadCredentialsFrom(config.ConfigDir())
+				if err == nil && creds.RefreshToken != "" {
+					result["refresh_available"] = true
+				}
+			}
+
+			return ios.WriteJSON(output.NewSuccessEnvelope(result))
 		},
 	}
 }

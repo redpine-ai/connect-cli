@@ -24,7 +24,6 @@ type Factory struct {
 	APIKeyFlag   string
 	ServerFlag   string
 	JSONFlag     string
-	JQFlag       string
 	PrettyFlag   bool
 	QuietFlag    bool
 	InsecureFlag bool
@@ -67,7 +66,10 @@ func New() *Factory {
 	}
 
 	f.MCPClient = func(token string) *mcp.Client {
-		cfg, _ := f.Config()
+		cfg, err := f.Config()
+		if err != nil {
+			return mcp.NewClient(config.DefaultServerURL, token, f.InsecureFlag)
+		}
 		serverURL := f.ServerFlag
 		if serverURL == "" {
 			serverURL = os.Getenv("CONNECT_SERVER_URL")
@@ -88,7 +90,10 @@ func New() *Factory {
 // MCPClientWithSession creates an MCP client and attempts to reuse a cached
 // session ID. On a cold start it calls Initialize and caches the new session.
 func (f *Factory) MCPClientWithSession(token string) (*mcp.Client, *mcp.SessionCache, error) {
-	cfg, _ := f.Config()
+	cfg, err := f.Config()
+	if err != nil {
+		cfg = &config.Config{ServerURL: config.DefaultServerURL}
+	}
 	serverURL := f.ServerFlag
 	if serverURL == "" {
 		serverURL = os.Getenv("CONNECT_SERVER_URL")

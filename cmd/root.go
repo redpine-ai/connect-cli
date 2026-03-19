@@ -24,7 +24,6 @@ var (
 	flagAPIKey   string
 	flagServer   string
 	flagJSON     string
-	flagJQ       string
 	flagPretty   bool
 	flagQuiet    bool
 	flagInsecure bool
@@ -46,7 +45,6 @@ func NewRootCmd() *cobra.Command {
 	pf.StringVar(&flagAPIKey, "api-key", "", "API key for authentication (env: CONNECT_API_KEY)")
 	pf.StringVar(&flagServer, "server", "", "Server URL (env: CONNECT_SERVER_URL)")
 	pf.StringVar(&flagJSON, "json", "", "Force JSON output; optionally select comma-separated fields")
-	pf.StringVar(&flagJQ, "jq", "", "Filter/transform JSON output with a jq expression")
 	pf.BoolVar(&flagPretty, "pretty", false, "Force human-readable output")
 	pf.BoolVarP(&flagQuiet, "quiet", "q", false, "Suppress all output except errors")
 	pf.BoolVar(&flagInsecure, "insecure", false, "Allow non-HTTPS server URLs")
@@ -58,7 +56,6 @@ func NewRootCmd() *cobra.Command {
 		f.APIKeyFlag = flagAPIKey
 		f.ServerFlag = flagServer
 		f.JSONFlag = flagJSON
-		f.JQFlag = flagJQ
 		f.PrettyFlag = flagPretty
 		f.QuietFlag = flagQuiet
 		f.InsecureFlag = flagInsecure

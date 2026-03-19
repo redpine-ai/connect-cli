@@ -74,5 +74,23 @@ func (tc *ToolCache) Save(tools []mcp.Tool) error {
 		return err
 	}
 
-	return os.WriteFile(filepath.Join(tc.dir, cacheFileName), data, 0600)
+	// Atomic write
+	path := filepath.Join(tc.dir, cacheFileName)
+	tmp, err := os.CreateTemp(tc.dir, ".tools-cache-*")
+	if err != nil {
+		return os.WriteFile(path, data, 0600) // fallback
+	}
+	tmpName := tmp.Name()
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		os.Remove(tmpName)
+		return err
+	}
+	if err := tmp.Chmod(0600); err != nil {
+		tmp.Close()
+		os.Remove(tmpName)
+		return err
+	}
+	tmp.Close()
+	return os.Rename(tmpName, path)
 }

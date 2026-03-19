@@ -15,7 +15,9 @@ func NewSearchCmd(f *factory.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "search <query>",
 		Short: "Search documents across collections",
-		Args:  cobra.MinimumNArgs(1),
+		Example: `  connect search "how does authentication work"
+  connect search "rate limiting" --collection api-docs --limit 5`,
+		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, _ := f.Token(f.APIKeyFlag)
 			if token == "" {

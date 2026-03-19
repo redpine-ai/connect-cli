@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/redpine-ai/connect-cli/internal/factory"
@@ -29,7 +30,10 @@ func NewCallCmd(f *factory.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "call <tool-name> [key=value...]",
 		Short: "Call an upstream MCP tool",
-		Args:  cobra.MinimumNArgs(1),
+		Example: `  connect tools call analytics--run_query query="SELECT *" limit=10
+  echo '{"query": "test"}' | connect tools call analytics--run_query
+  connect tools call analytics--run_query --input '{"query": "test"}'`,
+		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, _ := f.Token(f.APIKeyFlag)
 			if token == "" {
@@ -118,9 +122,29 @@ func parseToolArgs(kvArgs []string, jsonInput string) (map[string]interface{}, e
 		if len(parts) != 2 {
 			return nil, fmt.Errorf("invalid argument %q: expected key=value format", arg)
 		}
-		result[parts[0]] = parts[1]
+		result[parts[0]] = coerceValue(parts[1])
 	}
 	return result, nil
+}
+
+func coerceValue(s string) interface{} {
+	// Boolean
+	if s == "true" {
+		return true
+	}
+	if s == "false" {
+		return false
+	}
+	// Integer
+	if n, err := strconv.ParseInt(s, 10, 64); err == nil {
+		return n
+	}
+	// Float
+	if f, err := strconv.ParseFloat(s, 64); err == nil {
+		return f
+	}
+	// String
+	return s
 }
 
 func validateToolName(name string, tools []mcp.Tool) error {

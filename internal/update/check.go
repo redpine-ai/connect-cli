@@ -68,13 +68,7 @@ func loadCachedVersion(cacheDir string) string {
 		return ""
 	}
 	if time.Since(cache.CheckedAt) > cacheTTL {
-		// Expired — fetch fresh but return stale for now to avoid blocking
-		go func() {
-			if v := fetchLatestVersion(); v != "" {
-				saveCachedVersion(cacheDir, v)
-			}
-		}()
-		return cache.Version
+		return "" // expired — caller will fetch fresh
 	}
 	return cache.Version
 }

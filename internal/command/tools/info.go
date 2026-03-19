@@ -18,7 +18,9 @@ func NewInfoCmd(f *factory.Factory) *cobra.Command {
 	return &cobra.Command{
 		Use:   "info <tool-name>",
 		Short: "Show tool details — parameters, types, and usage",
-		Args:  cobra.ExactArgs(1),
+		Example: `  connect tools info search
+  connect tools info analytics--run_query`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, _ := f.Token(f.APIKeyFlag)
 			if token == "" {

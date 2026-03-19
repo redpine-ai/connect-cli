@@ -13,6 +13,8 @@ func NewListCmd(f *factory.Factory) *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
 		Short: "List available upstream MCP tools",
+		Example: `  connect tools list
+  connect tools list --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, _ := f.Token(f.APIKeyFlag)
 			if token == "" {
