@@ -12,6 +12,7 @@ import (
 	"github.com/redpine-ai/connect-cli/internal/command/search"
 	"github.com/redpine-ai/connect-cli/internal/command/tools"
 	updatecmd "github.com/redpine-ai/connect-cli/internal/command/update"
+	"github.com/redpine-ai/connect-cli/internal/command/whoami"
 	"github.com/redpine-ai/connect-cli/internal/config"
 	"github.com/redpine-ai/connect-cli/internal/factory"
 	"github.com/redpine-ai/connect-cli/internal/output"
@@ -83,6 +84,7 @@ func NewRootCmd() *cobra.Command {
 	root.AddCommand(tools.NewToolsCmd(f))
 	root.AddCommand(docs.NewDocsCmd(f))
 	root.AddCommand(updatecmd.NewUpdateCmd(f))
+	root.AddCommand(whoami.NewWhoamiCmd(f))
 
 	return root
 }

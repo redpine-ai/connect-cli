@@ -26,13 +26,15 @@ func (e *toolValidationError) Error() string { return e.Message }
 
 func NewCallCmd(f *factory.Factory) *cobra.Command {
 	var inputJSON string
+	var dryRun bool
 
 	cmd := &cobra.Command{
 		Use:   "call <tool-name> [key=value...]",
 		Short: "Call an upstream MCP tool",
 		Example: `  redpine tools call analytics--run_query query="SELECT *" limit=10
   echo '{"query": "test"}' | redpine tools call analytics--run_query
-  redpine tools call analytics--run_query --input '{"query": "test"}'`,
+  redpine tools call analytics--run_query --input '{"query": "test"}'
+  redpine tools call analytics--run_query query="test" --dry-run`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, _ := f.Token(f.APIKeyFlag)
@@ -81,6 +83,27 @@ func NewCallCmd(f *factory.Factory) *cobra.Command {
 				}
 			}
 
+			// Dry run — show what would be sent without executing
+			if dryRun {
+				payload := map[string]interface{}{
+					"jsonrpc": "2.0",
+					"method":  "tools/call",
+					"params": map[string]interface{}{
+						"name":      toolName,
+						"arguments": toolArgs,
+					},
+				}
+				ios := f.IOStreams()
+				return ios.WriteResult(payload, f.JSONFlag != "", f.PrettyFlag, func(w io.Writer) {
+					fmt.Fprintf(w, "Method:    tools/call\n")
+					fmt.Fprintf(w, "Tool:      %s\n", toolName)
+					fmt.Fprintf(w, "Arguments:\n")
+					for k, v := range toolArgs {
+						fmt.Fprintf(w, "  %s = %v\n", k, v)
+					}
+				})
+			}
+
 			client, sc, err := f.MCPClientWithSession(token)
 			if err != nil {
 				return &output.CLIError{Code: "server_error", Message: err.Error(), ExitCode: output.ExitServer}
@@ -105,6 +128,7 @@ func NewCallCmd(f *factory.Factory) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&inputJSON, "input", "", "Tool arguments as JSON string")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be sent without executing")
 	return cmd
 }
 
