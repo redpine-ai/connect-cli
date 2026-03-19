@@ -58,7 +58,7 @@ func NewListCmd(f *factory.Factory) *cobra.Command {
 						fmt.Fprintf(ios.Out, "  %-25s %s\n", t.Name, t.Description)
 					}
 					fmt.Fprintln(ios.Out)
-					fmt.Fprintln(ios.Out, "Run 'redpine search' and 'redpine collections list' to use built-in tools.")
+					fmt.Fprintln(ios.Out, "Run 'redpine search' and 'redpine collections' to use built-in tools.")
 				}
 			} else {
 				ios.WriteJSON(output.NewSuccessEnvelope(map[string]interface{}{
