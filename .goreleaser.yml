@@ -42,6 +42,7 @@ brews:
   - repository:
       owner: redpine-ai
       name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     name: connect-cli
     homepage: "https://github.com/redpine-ai/connect-cli"
     description: "CLI for the Connect platform — MCP client for AI agents"
