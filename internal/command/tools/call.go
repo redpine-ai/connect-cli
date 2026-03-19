@@ -195,7 +195,7 @@ func validateParams(args map[string]interface{}, schema json.RawMessage) error {
 			return &output.CLIError{
 				Code:     "missing_param",
 				Message:  fmt.Sprintf("Missing required parameter '%s'", req),
-				Hint:     fmt.Sprintf("Required: %s. Optional: %s", strings.Join(s.Required, ", "), strings.Join(optionals, ", ")),
+				Hint:     fmt.Sprintf("Required: %s. Optional: %s. Run 'connect tools info <tool>' for details", strings.Join(s.Required, ", "), strings.Join(optionals, ", ")),
 				ExitCode: output.ExitInput,
 			}
 		}
@@ -218,7 +218,7 @@ func validateParams(args map[string]interface{}, schema json.RawMessage) error {
 				Code:        "unknown_param",
 				Message:     fmt.Sprintf("Unknown parameter '%s'", param),
 				Suggestions: suggestions,
-				Hint:        fmt.Sprintf("Known parameters: %s", strings.Join(knownParams, ", ")),
+				Hint:        fmt.Sprintf("Known parameters: %s. Run 'connect tools info <tool>' for details", strings.Join(knownParams, ", ")),
 				ExitCode:    output.ExitInput,
 			}
 		}

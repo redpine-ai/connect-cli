@@ -11,6 +11,7 @@ func NewToolsCmd(f *factory.Factory) *cobra.Command {
 		Short: "Discover and call upstream MCP tools",
 	}
 	cmd.AddCommand(NewListCmd(f))
+	cmd.AddCommand(NewInfoCmd(f))
 	cmd.AddCommand(NewCallCmd(f))
 	return cmd
 }
