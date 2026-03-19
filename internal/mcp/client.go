@@ -27,9 +27,9 @@ type Client struct {
 	idCounter int
 }
 
-func NewClient(serverURL, token string, insecure bool) *Client {
+func NewClient(serverURL, token string) *Client {
 	return &Client{
-		transport: NewTransport(serverURL, token, insecure),
+		transport: NewTransport(serverURL, token),
 	}
 }
 

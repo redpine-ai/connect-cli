@@ -33,7 +33,7 @@ func TestClient_Initialize(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "token", true)
+	client := NewClient(server.URL, "token")
 	err := client.Initialize()
 	if err != nil {
 		t.Fatal(err)
@@ -50,7 +50,7 @@ func TestClient_ListTools(t *testing.T) {
 	})
 	defer server.Close()
 
-	client := NewClient(server.URL, "token", true)
+	client := NewClient(server.URL, "token")
 	if err := client.Initialize(); err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func TestClient_CallTool(t *testing.T) {
 	})
 	defer server.Close()
 
-	client := NewClient(server.URL, "token", true)
+	client := NewClient(server.URL, "token")
 	if err := client.Initialize(); err != nil {
 		t.Fatal(err)
 	}

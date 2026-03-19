@@ -55,19 +55,17 @@ func (e *HTTPError) Error() string {
 type Transport struct {
 	url       string
 	token     string
-	insecure  bool
 	sessionID string
 	client    *http.Client
 }
 
-func NewTransport(url, token string, insecure bool) *Transport {
+func NewTransport(url, token string) *Transport {
 	url = strings.TrimSuffix(url, "/")
 	url = strings.TrimSuffix(url, "/mcp")
 	return &Transport{
-		url:      url,
-		token:    token,
-		insecure: insecure,
-		client:   &http.Client{},
+		url:    url,
+		token:  token,
+		client: &http.Client{},
 	}
 }
 
@@ -192,8 +190,11 @@ func (t *Transport) setHeaders(req *http.Request) {
 }
 
 func (t *Transport) validateURL() error {
-	if !t.insecure && !strings.HasPrefix(t.url, "https://") {
-		return fmt.Errorf("HTTPS required. Use --insecure for non-HTTPS URLs (local dev only)")
+	if strings.HasPrefix(t.url, "https://") {
+		return nil
 	}
-	return nil
+	if strings.HasPrefix(t.url, "http://localhost") || strings.HasPrefix(t.url, "http://127.0.0.1") {
+		return nil
+	}
+	return fmt.Errorf("HTTPS required (HTTP is only allowed for localhost)")
 }

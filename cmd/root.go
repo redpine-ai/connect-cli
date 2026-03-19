@@ -21,12 +21,11 @@ import (
 )
 
 var (
-	flagAPIKey   string
-	flagServer   string
-	flagJSON     string
-	flagPretty   bool
-	flagQuiet    bool
-	flagInsecure bool
+	flagAPIKey string
+	flagServer string
+	flagJSON   string
+	flagPretty bool
+	flagQuiet  bool
 )
 
 func NewRootCmd() *cobra.Command {
@@ -47,7 +46,6 @@ func NewRootCmd() *cobra.Command {
 	pf.StringVar(&flagJSON, "json", "", "Force JSON output; optionally select comma-separated fields")
 	pf.BoolVar(&flagPretty, "pretty", false, "Force human-readable output")
 	pf.BoolVarP(&flagQuiet, "quiet", "q", false, "Suppress all output except errors")
-	pf.BoolVar(&flagInsecure, "insecure", false, "Allow non-HTTPS server URLs")
 
 	root.PersistentFlags().Lookup("json").NoOptDefVal = "*"
 
@@ -58,7 +56,6 @@ func NewRootCmd() *cobra.Command {
 		f.JSONFlag = flagJSON
 		f.PrettyFlag = flagPretty
 		f.QuietFlag = flagQuiet
-		f.InsecureFlag = flagInsecure
 
 		// Version check — skip for update, help, completion, and shell completion hooks
 		name := cmd.Name()

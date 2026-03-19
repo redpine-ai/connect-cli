@@ -21,12 +21,11 @@ type Factory struct {
 	ToolCache func() *cache.ToolCache
 
 	// Global flag values — set by root command
-	APIKeyFlag   string
-	ServerFlag   string
-	JSONFlag     string
-	PrettyFlag   bool
-	QuietFlag    bool
-	InsecureFlag bool
+	APIKeyFlag string
+	ServerFlag string
+	JSONFlag   string
+	PrettyFlag bool
+	QuietFlag  bool
 }
 
 func New() *Factory {
@@ -68,7 +67,7 @@ func New() *Factory {
 	f.MCPClient = func(token string) *mcp.Client {
 		cfg, err := f.Config()
 		if err != nil {
-			return mcp.NewClient(config.DefaultServerURL, token, f.InsecureFlag)
+			return mcp.NewClient(config.DefaultServerURL, token)
 		}
 		serverURL := f.ServerFlag
 		if serverURL == "" {
@@ -77,7 +76,7 @@ func New() *Factory {
 		if serverURL == "" {
 			serverURL = cfg.ServerURL
 		}
-		return mcp.NewClient(serverURL, token, f.InsecureFlag)
+		return mcp.NewClient(serverURL, token)
 	}
 
 	f.ToolCache = func() *cache.ToolCache {
@@ -102,7 +101,7 @@ func (f *Factory) MCPClientWithSession(token string) (*mcp.Client, *mcp.SessionC
 		serverURL = cfg.ServerURL
 	}
 
-	client := mcp.NewClient(serverURL, token, f.InsecureFlag)
+	client := mcp.NewClient(serverURL, token)
 	sc := mcp.DefaultSessionCache(serverURL)
 
 	// Try cached session
@@ -117,7 +116,7 @@ func (f *Factory) MCPClientWithSession(token string) (*mcp.Client, *mcp.SessionC
 		if strings.Contains(err.Error(), "401") || strings.Contains(strings.ToLower(err.Error()), "unauthorized") {
 			newToken, refreshErr := config.RefreshOAuthToken(f.Keyring())
 			if refreshErr == nil && newToken != "" {
-				client = mcp.NewClient(serverURL, newToken, f.InsecureFlag)
+				client = mcp.NewClient(serverURL, newToken)
 				if err := client.Initialize(); err != nil {
 					return nil, nil, err
 				}
@@ -140,7 +139,7 @@ func NewTest(ios *output.IOStreams, cfg *config.Config, kr config.Keyring) *Fact
 		return config.ResolveToken(flagValue, kr)
 	}
 	f.MCPClient = func(token string) *mcp.Client {
-		return mcp.NewClient(cfg.ServerURL, token, true)
+		return mcp.NewClient(cfg.ServerURL, token)
 	}
 	f.ToolCache = func() *cache.ToolCache {
 		return cache.NewToolCache("")

@@ -26,7 +26,8 @@ func TestTransport_SendRequest(t *testing.T) {
 	}))
 	defer server.Close()
 
-	tr := NewTransport(server.URL, "test-token", true)
+	// httptest.NewServer uses 127.0.0.1 — allowed without HTTPS
+	tr := NewTransport(server.URL, "test-token")
 	resp, err := tr.Send(&RPCRequest{
 		JSONRPC: "2.0",
 		ID:      1,
@@ -57,7 +58,7 @@ func TestTransport_SendBatch(t *testing.T) {
 	}))
 	defer server.Close()
 
-	tr := NewTransport(server.URL, "test-token", true)
+	tr := NewTransport(server.URL, "test-token")
 	responses, err := tr.SendBatch([]interface{}{
 		&RPCRequest{JSONRPC: "2.0", ID: 1, Method: "a"},
 		&RPCNotification{JSONRPC: "2.0", Method: "b"},
@@ -71,23 +72,24 @@ func TestTransport_SendBatch(t *testing.T) {
 }
 
 func TestTransport_RejectsHTTP(t *testing.T) {
-	tr := NewTransport("http://example.com", "token", false)
+	tr := NewTransport("http://example.com", "token")
 	_, err := tr.Send(&RPCRequest{JSONRPC: "2.0", ID: 1, Method: "test"})
 	if err == nil {
-		t.Error("should reject non-HTTPS URL")
+		t.Error("should reject non-HTTPS non-localhost URL")
 	}
 }
 
-func TestTransport_AllowsHTTPWithInsecure(t *testing.T) {
+func TestTransport_AllowsLocalhost(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(RPCResponse{JSONRPC: "2.0", ID: jsonRawInt(1)})
 	}))
 	defer server.Close()
 
-	tr := NewTransport(server.URL, "token", true)
+	// httptest.NewServer binds to 127.0.0.1 — should be allowed
+	tr := NewTransport(server.URL, "token")
 	_, err := tr.Send(&RPCRequest{JSONRPC: "2.0", ID: 1, Method: "test"})
 	if err != nil {
-		t.Errorf("insecure should allow HTTP: %v", err)
+		t.Errorf("localhost should be allowed over HTTP: %v", err)
 	}
 }
 
