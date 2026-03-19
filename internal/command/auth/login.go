@@ -88,7 +88,11 @@ func NewLoginCmd(f *factory.Factory) *cobra.Command {
 
 			srv := &http.Server{Handler: mux}
 			go srv.Serve(listener) //nolint:errcheck
-			defer srv.Shutdown(context.Background()) //nolint:errcheck
+			defer func() {
+				ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+				defer cancel()
+				srv.Shutdown(ctx) //nolint:errcheck
+			}()
 
 			// 2. Register client
 			fmt.Fprintln(ios.ErrOut, "Registering client...")

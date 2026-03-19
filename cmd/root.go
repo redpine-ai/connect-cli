@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/redpine-ai/connect-cli/internal/command/auth"
@@ -10,9 +11,11 @@ import (
 	"github.com/redpine-ai/connect-cli/internal/command/docs"
 	"github.com/redpine-ai/connect-cli/internal/command/search"
 	"github.com/redpine-ai/connect-cli/internal/command/tools"
-	"github.com/redpine-ai/connect-cli/internal/command/update"
+	updatecmd "github.com/redpine-ai/connect-cli/internal/command/update"
+	"github.com/redpine-ai/connect-cli/internal/config"
 	"github.com/redpine-ai/connect-cli/internal/factory"
 	"github.com/redpine-ai/connect-cli/internal/output"
+	"github.com/redpine-ai/connect-cli/internal/update"
 	"github.com/redpine-ai/connect-cli/internal/version"
 	"github.com/spf13/cobra"
 )
@@ -51,7 +54,7 @@ func NewRootCmd() *cobra.Command {
 	root.PersistentFlags().Lookup("json").NoOptDefVal = "*"
 
 	f := factory.New()
-	root.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+	root.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		f.APIKeyFlag = flagAPIKey
 		f.ServerFlag = flagServer
 		f.JSONFlag = flagJSON
@@ -59,6 +62,24 @@ func NewRootCmd() *cobra.Command {
 		f.PrettyFlag = flagPretty
 		f.QuietFlag = flagQuiet
 		f.InsecureFlag = flagInsecure
+
+		// Version check — skip for update, help, completion
+		name := cmd.Name()
+		if name == "update" || name == "help" || name == "completion" {
+			return nil
+		}
+
+		cacheDir := filepath.Join(config.ConfigDir(), "cache")
+		result := update.Check(cacheDir)
+		if result != nil && result.IsOutdated {
+			return &output.CLIError{
+				Code:     "update_required",
+				Message:  result.FormatWarning(),
+				ExitCode: output.ExitError,
+			}
+		}
+
+		return nil
 	}
 
 	root.AddCommand(auth.NewAuthCmd(f))
@@ -66,7 +87,7 @@ func NewRootCmd() *cobra.Command {
 	root.AddCommand(search.NewSearchCmd(f))
 	root.AddCommand(tools.NewToolsCmd(f))
 	root.AddCommand(docs.NewDocsCmd(f))
-	root.AddCommand(update.NewUpdateCmd(f))
+	root.AddCommand(updatecmd.NewUpdateCmd(f))
 
 	return root
 }
