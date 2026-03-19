@@ -47,40 +47,18 @@ func NewCallCmd(f *factory.Factory) *cobra.Command {
 
 			toolName := args[0]
 
+			// Read stdin if piped
+			var stdinData []byte
 			if inputJSON == "" {
 				stat, _ := os.Stdin.Stat()
 				if (stat.Mode() & os.ModeCharDevice) == 0 {
-					data, _ := io.ReadAll(os.Stdin)
-					if len(data) > 0 {
-						inputJSON = string(data)
-					}
+					stdinData, _ = io.ReadAll(os.Stdin)
 				}
 			}
 
-			toolArgs, err := parseToolArgs(args[1:], inputJSON)
+			toolArgs, err := parseToolArgs(args[1:], inputJSON, stdinData)
 			if err != nil {
 				return &output.CLIError{Code: "invalid_input", Message: err.Error(), ExitCode: output.ExitInput}
-			}
-
-			tc := f.ToolCache()
-			cachedTools, cacheErr := tc.Load()
-
-			if cacheErr == nil {
-				if valErr := validateToolName(toolName, cachedTools); valErr != nil {
-					vErr := valErr.(*toolValidationError)
-					return &output.CLIError{
-						Code: "tool_not_found", Message: vErr.Message,
-						Suggestions: vErr.Suggestions, Hint: vErr.Hint, ExitCode: output.ExitInput,
-					}
-				}
-				for _, t := range cachedTools {
-					if t.Name == toolName {
-						if paramErr := validateParams(toolArgs, t.InputSchema); paramErr != nil {
-							return paramErr
-						}
-						break
-					}
-				}
 			}
 
 			// Dry run — show what would be sent without executing
@@ -102,6 +80,27 @@ func NewCallCmd(f *factory.Factory) *cobra.Command {
 						fmt.Fprintf(w, "  %s = %v\n", k, v)
 					}
 				})
+			}
+
+			// Validate against cached tool schemas
+			tc := f.ToolCache()
+			cachedTools, cacheErr := tc.Load()
+			if cacheErr == nil {
+				if valErr := validateToolName(toolName, cachedTools); valErr != nil {
+					vErr := valErr.(*toolValidationError)
+					return &output.CLIError{
+						Code: "tool_not_found", Message: vErr.Message,
+						Suggestions: vErr.Suggestions, Hint: vErr.Hint, ExitCode: output.ExitInput,
+					}
+				}
+				for _, t := range cachedTools {
+					if t.Name == toolName {
+						if paramErr := validateParams(toolArgs, t.InputSchema); paramErr != nil {
+							return paramErr
+						}
+						break
+					}
+				}
 			}
 
 			client, sc, err := f.MCPClientWithSession(token)
@@ -136,7 +135,8 @@ func NewCallCmd(f *factory.Factory) *cobra.Command {
 	return cmd
 }
 
-func parseToolArgs(kvArgs []string, jsonInput string) (map[string]interface{}, error) {
+func parseToolArgs(kvArgs []string, jsonInput string, stdinData []byte) (map[string]interface{}, error) {
+	// Priority: explicit --input JSON > key=value args > piped stdin auto-wire
 	if jsonInput != "" {
 		var result map[string]interface{}
 		if err := json.Unmarshal([]byte(jsonInput), &result); err != nil {
@@ -144,7 +144,18 @@ func parseToolArgs(kvArgs []string, jsonInput string) (map[string]interface{}, e
 		}
 		return result, nil
 	}
+
 	result := make(map[string]interface{})
+
+	// Auto-wire: extract fields from piped stdin (previous command's output)
+	if len(stdinData) > 0 {
+		piped := extractPipedFields(stdinData)
+		for k, v := range piped {
+			result[k] = v
+		}
+	}
+
+	// Key=value args override piped values
 	for _, arg := range kvArgs {
 		parts := strings.SplitN(arg, "=", 2)
 		if len(parts) != 2 {
@@ -153,6 +164,51 @@ func parseToolArgs(kvArgs []string, jsonInput string) (map[string]interface{}, e
 		result[parts[0]] = coerceValue(parts[1])
 	}
 	return result, nil
+}
+
+// extractPipedFields parses piped JSON from a previous command and extracts
+// useful fields. Handles both the envelope format {"status":"ok","data":{...}}
+// and raw JSON objects. Extracts ID-like fields (workspace_id, etc.) and
+// all top-level string/number/bool values.
+func extractPipedFields(data []byte) map[string]interface{} {
+	result := make(map[string]interface{})
+
+	// Try envelope format first
+	var envelope struct {
+		Status string                 `json:"status"`
+		Data   map[string]interface{} `json:"data"`
+	}
+	if err := json.Unmarshal(data, &envelope); err == nil && envelope.Data != nil {
+		extractFlat(envelope.Data, result)
+		return result
+	}
+
+	// Try raw JSON object
+	var raw map[string]interface{}
+	if err := json.Unmarshal(data, &raw); err == nil {
+		extractFlat(raw, result)
+		return result
+	}
+
+	return result
+}
+
+// extractFlat pulls scalar values and recursively extracts from nested
+// content blocks (MCP tool results).
+func extractFlat(src map[string]interface{}, dst map[string]interface{}) {
+	for k, v := range src {
+		switch val := v.(type) {
+		case string:
+			dst[k] = val
+		case float64:
+			dst[k] = val
+		case bool:
+			dst[k] = val
+		case map[string]interface{}:
+			// Recurse one level for nested objects
+			extractFlat(val, dst)
+		}
+	}
 }
 
 func coerceValue(s string) interface{} {
