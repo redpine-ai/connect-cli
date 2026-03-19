@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/redpine-ai/connect-cli/internal/factory"
@@ -35,16 +36,35 @@ func NewListCmd(f *factory.Factory) *cobra.Command {
 			tc := f.ToolCache()
 			tc.Save(allTools)
 			upstream := filterUpstreamTools(allTools)
+			builtin := filterBuiltinTools(allTools)
 			ios := f.IOStreams()
 			if ios.OutputMode(f.JSONFlag != "", f.PrettyFlag) == output.ModePretty {
-				headers := []string{"TOOL", "DESCRIPTION"}
-				var rows [][]string
-				for _, t := range upstream {
-					rows = append(rows, []string{t.Name, t.Description})
+				if len(upstream) > 0 {
+					fmt.Fprintln(ios.Out, "Upstream tools:")
+					headers := []string{"TOOL", "DESCRIPTION"}
+					var rows [][]string
+					for _, t := range upstream {
+						rows = append(rows, []string{t.Name, t.Description})
+					}
+					output.RenderTable(ios.Out, headers, rows)
+				} else {
+					fmt.Fprintln(ios.Out, "No upstream MCP tools registered.")
+					fmt.Fprintln(ios.Out, "Ask your admin to register upstream servers in Connect.")
 				}
-				output.RenderTable(ios.Out, headers, rows)
+				if len(builtin) > 0 {
+					fmt.Fprintln(ios.Out)
+					fmt.Fprintln(ios.Out, "Built-in (use via dedicated commands):")
+					for _, t := range builtin {
+						fmt.Fprintf(ios.Out, "  %-25s %s\n", t.Name, t.Description)
+					}
+					fmt.Fprintln(ios.Out)
+					fmt.Fprintln(ios.Out, "Run 'connect search' and 'connect collections list' to use built-in tools.")
+				}
 			} else {
-				ios.WriteJSON(output.NewSuccessEnvelope(upstream))
+				ios.WriteJSON(output.NewSuccessEnvelope(map[string]interface{}{
+					"upstream": upstream,
+					"builtin":  builtin,
+				}))
 			}
 			return nil
 		},
@@ -59,4 +79,14 @@ func filterUpstreamTools(tools []mcp.Tool) []mcp.Tool {
 		}
 	}
 	return upstream
+}
+
+func filterBuiltinTools(tools []mcp.Tool) []mcp.Tool {
+	var builtin []mcp.Tool
+	for _, t := range tools {
+		if !strings.Contains(t.Name, "--") {
+			builtin = append(builtin, t)
+		}
+	}
+	return builtin
 }
