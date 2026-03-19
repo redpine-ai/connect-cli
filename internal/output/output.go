@@ -6,9 +6,12 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 
 	"golang.org/x/term"
 )
+
+var mdBoldRe = regexp.MustCompile(`\*\*(.+?)\*\*`)
 
 // OutputMode determines how output is rendered.
 type OutputMode int
@@ -128,7 +131,13 @@ func (ios *IOStreams) WriteMCPResult(result interface{}, jsonFlag, prettyFlag bo
 		if err := json.Unmarshal(data, &tr); err == nil && len(tr.Content) > 0 {
 			for _, block := range tr.Content {
 				if block.Type == "text" && block.Text != "" {
-					fmt.Fprintln(ios.Out, block.Text)
+					text := block.Text
+					if ios.Color {
+						text = mdBoldRe.ReplaceAllString(text, "\033[1m$1\033[0m")
+					} else {
+						text = mdBoldRe.ReplaceAllString(text, "$1")
+					}
+					fmt.Fprintln(ios.Out, text)
 				}
 			}
 			return nil
