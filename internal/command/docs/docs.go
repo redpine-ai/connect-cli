@@ -16,9 +16,9 @@ func NewDocsCmd(f *factory.Factory) *cobra.Command {
 		Short: "Open Connect API documentation in browser",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ios := f.IOStreams()
-			url := "https://docs.redpine.ai"
+			url := "https://app.redpine.ai/docs/overview"
 			if len(args) > 0 {
-				url += "/" + args[0]
+				url = "https://app.redpine.ai/docs/" + args[0]
 			}
 
 			if ios.IsTTY() {
