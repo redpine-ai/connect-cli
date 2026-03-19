@@ -74,7 +74,7 @@ func New() *Factory {
 			serverURL = os.Getenv("CONNECT_SERVER_URL")
 		}
 		if serverURL == "" {
-			serverURL = cfg.ServerURL
+			serverURL = cfg.ServerURLForEnv()
 		}
 		return mcp.NewClient(serverURL, token)
 	}
@@ -98,7 +98,7 @@ func (f *Factory) MCPClientWithSession(token string) (*mcp.Client, *mcp.SessionC
 		serverURL = os.Getenv("CONNECT_SERVER_URL")
 	}
 	if serverURL == "" {
-		serverURL = cfg.ServerURL
+		serverURL = cfg.ServerURLForEnv()
 	}
 
 	client := mcp.NewClient(serverURL, token)
@@ -163,7 +163,7 @@ func (f *Factory) RunWithRefresh(
 		serverURL = os.Getenv("CONNECT_SERVER_URL")
 	}
 	if serverURL == "" {
-		serverURL = cfg.ServerURL
+		serverURL = cfg.ServerURLForEnv()
 	}
 
 	newClient := mcp.NewClient(serverURL, newToken)

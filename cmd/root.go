@@ -27,6 +27,7 @@ var (
 	flagJSON   string
 	flagPretty bool
 	flagQuiet  bool
+	flagEnv    string
 )
 
 func NewRootCmd() *cobra.Command {
@@ -49,6 +50,11 @@ Use --json on any command for structured JSON output.`,
 		SilenceErrors:             true,
 		SuggestionsMinimumDistance: 2,
 		Version:                   version.Full(),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// If --env was passed standalone, PersistentPreRunE handles it and exits.
+			// Otherwise show help.
+			return cmd.Help()
+		},
 	}
 
 	root.SetVersionTemplate("{{.Version}}\n")
@@ -62,8 +68,55 @@ Use --json on any command for structured JSON output.`,
 
 	root.PersistentFlags().Lookup("json").NoOptDefVal = "*"
 
+	// Hidden env switch — not shown in help
+	pf.StringVar(&flagEnv, "env", "", "")
+	root.PersistentFlags().Lookup("env").Hidden = true
+
 	f := factory.New()
+
+	// Handle --env before anything else (works even without a subcommand)
 	root.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		if flagEnv != "" {
+			if _, ok := config.EnvURLs[flagEnv]; !ok {
+				return &output.CLIError{
+					Code:     "invalid_env",
+					Message:  fmt.Sprintf("Unknown environment '%s'", flagEnv),
+					Hint:     "Valid environments: production, staging",
+					ExitCode: output.ExitInput,
+				}
+			}
+
+			cfg, err := config.Load()
+			if err != nil {
+				cfg = &config.Config{ServerURL: config.DefaultServerURL}
+			}
+
+			if cfg.Environment != flagEnv {
+				cfg.Environment = flagEnv
+				cfg.ServerURL = config.EnvURLs[flagEnv]
+				cfg.Save()
+
+				// Clear auth — tokens are env-specific
+				kr := f.Keyring()
+				kr.Delete()
+				os.Remove(filepath.Join(config.ConfigDir(), "credentials.json"))
+
+				// Clear session cache
+				sc := filepath.Join(os.TempDir(), "redpine-session-*")
+				matches, _ := filepath.Glob(sc)
+				for _, m := range matches {
+					os.Remove(m)
+				}
+
+				// Clear tool cache
+				os.RemoveAll(filepath.Join(config.ConfigDir(), "cache"))
+
+				fmt.Fprintf(os.Stderr, "Switched to %s (%s)\n", flagEnv, config.EnvURLs[flagEnv])
+				fmt.Fprintln(os.Stderr, "Auth cleared — run 'redpine auth login' to authenticate.")
+				os.Exit(0)
+			}
+		}
+
 		f.APIKeyFlag = flagAPIKey
 		f.ServerFlag = flagServer
 		f.JSONFlag = flagJSON

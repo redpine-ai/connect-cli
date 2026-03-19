@@ -11,10 +11,27 @@ const (
 	configFileName   = "config.json"
 )
 
+// Environment URLs — not exposed in help
+var EnvURLs = map[string]string{
+	"production": "https://api.redpine.ai",
+	"staging":    "https://connect-api-staging-667027452682.europe-west1.run.app",
+}
+
 type Config struct {
 	ServerURL         string `json:"server_url"`
 	DefaultCollection string `json:"default_collection,omitempty"`
 	Output            string `json:"output,omitempty"`
+	Environment       string `json:"environment,omitempty"`
+}
+
+// ServerURLForEnv returns the server URL for the current environment.
+func (c *Config) ServerURLForEnv() string {
+	if c.Environment != "" {
+		if url, ok := EnvURLs[c.Environment]; ok {
+			return url
+		}
+	}
+	return c.ServerURL
 }
 
 func ConfigDir() string {

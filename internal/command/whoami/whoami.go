@@ -56,10 +56,21 @@ func NewWhoamiCmd(f *factory.Factory) *cobra.Command {
 				"refresh_available": hasRefresh,
 			}
 
+			// Show environment if not production
+			cfg, _ := f.Config()
+			env := cfg.Environment
+			if env == "" {
+				env = "production"
+			}
+			result["environment"] = env
+
 			return ios.WriteResult(result, f.JSONFlag != "", f.PrettyFlag, func(w io.Writer) {
 				fmt.Fprintf(w, "Authenticated (%s)\n", tokenType)
 				fmt.Fprintf(w, "  Token:   %s\n", masked)
 				fmt.Fprintf(w, "  Source:  %s\n", source)
+				if env != "production" {
+					fmt.Fprintf(w, "  Env:     %s\n", env)
+				}
 				if tokenType == "OAuth" {
 					if hasRefresh {
 						fmt.Fprintf(w, "  Refresh: available\n")
