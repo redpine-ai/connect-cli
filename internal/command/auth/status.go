@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"fmt"
+	"io"
 	"strings"
 
 	"github.com/redpine-ai/connect-cli/internal/config"
@@ -18,14 +20,12 @@ func NewStatusCmd(f *factory.Factory) *cobra.Command {
 			ios := f.IOStreams()
 
 			if token == "" {
-				err := &output.CLIError{
+				return &output.CLIError{
 					Code:     "not_authenticated",
 					Message:  "Not authenticated",
 					Hint:     "Run 'connect auth login' or set CONNECT_API_KEY",
 					ExitCode: output.ExitAuth,
 				}
-				ios.WriteJSON(output.NewErrorEnvelope(err))
-				return err
 			}
 
 			var masked string
@@ -35,28 +35,39 @@ func NewStatusCmd(f *factory.Factory) *cobra.Command {
 				masked = token[:7] + "..." + token[len(token)-4:]
 			}
 
-			// Detect token type
-			tokenType := "oauth"
+			tokenType := "OAuth"
 			if strings.HasPrefix(token, "sk_live_") || strings.HasPrefix(token, "sk_test_") {
-				tokenType = "api_key"
+				tokenType = "API Key"
 			}
 
-			result := map[string]interface{}{
-				"authenticated": true,
-				"source":        source,
-				"type":          tokenType,
-				"token":         masked,
-			}
-
-			// Check if refresh token is available (OAuth only)
-			if tokenType == "oauth" {
+			hasRefresh := false
+			if tokenType == "OAuth" {
 				creds, err := config.LoadCredentialsFrom(config.ConfigDir())
 				if err == nil && creds.RefreshToken != "" {
-					result["refresh_available"] = true
+					hasRefresh = true
 				}
 			}
 
-			return ios.WriteJSON(output.NewSuccessEnvelope(result))
+			result := map[string]interface{}{
+				"authenticated":    true,
+				"source":           source,
+				"type":             tokenType,
+				"token":            masked,
+				"refresh_available": hasRefresh,
+			}
+
+			return ios.WriteResult(result, f.JSONFlag != "", f.PrettyFlag, func(w io.Writer) {
+				fmt.Fprintf(w, "Authenticated (%s)\n", tokenType)
+				fmt.Fprintf(w, "  Token:   %s\n", masked)
+				fmt.Fprintf(w, "  Source:  %s\n", source)
+				if tokenType == "OAuth" {
+					if hasRefresh {
+						fmt.Fprintf(w, "  Refresh: available\n")
+					} else {
+						fmt.Fprintf(w, "  Refresh: not available\n")
+					}
+				}
+			})
 		},
 	}
 }

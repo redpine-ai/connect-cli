@@ -1,13 +1,13 @@
 package auth
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/redpine-ai/connect-cli/internal/config"
 	"github.com/redpine-ai/connect-cli/internal/factory"
 	"github.com/redpine-ai/connect-cli/internal/mcp"
-	"github.com/redpine-ai/connect-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -38,10 +38,7 @@ func NewLogoutCmd(f *factory.Factory) *cobra.Command {
 			credsPath := filepath.Join(config.ConfigDir(), "credentials.json")
 			os.Remove(credsPath)
 
-			ios := f.IOStreams()
-			ios.WriteJSON(output.NewSuccessEnvelope(map[string]string{
-				"message": "Logged out successfully",
-			}))
+			fmt.Fprintln(f.IOStreams().ErrOut, "Logged out successfully")
 			return nil
 		},
 	}

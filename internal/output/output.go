@@ -61,19 +61,13 @@ func (ios *IOStreams) IsTTY() bool {
 	return ios.tty
 }
 
-// OutputMode resolves the effective output mode from flags and TTY state.
-// The jsonFlag and prettyFlag correspond to --json and --pretty CLI flags.
+// OutputMode resolves the effective output mode from flags.
+// Pretty (human-readable) is the default. JSON only when --json is explicitly passed.
 func (ios *IOStreams) OutputMode(jsonFlag, prettyFlag bool) OutputMode {
 	if jsonFlag {
 		return ModeJSON
 	}
-	if prettyFlag {
-		return ModePretty
-	}
-	if ios.tty {
-		return ModePretty
-	}
-	return ModeJSON
+	return ModePretty
 }
 
 // Envelope is the standard JSON response wrapper.

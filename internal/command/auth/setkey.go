@@ -50,10 +50,7 @@ func NewSetKeyCmd(f *factory.Factory, configDir string) *cobra.Command {
 				}
 			}
 
-			ios := f.IOStreams()
-			ios.WriteJSON(output.NewSuccessEnvelope(map[string]string{
-				"message": "API key stored successfully",
-			}))
+			fmt.Fprintln(f.IOStreams().ErrOut, "API key stored successfully")
 			return nil
 		},
 	}

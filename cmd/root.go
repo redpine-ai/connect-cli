@@ -60,9 +60,10 @@ func NewRootCmd() *cobra.Command {
 		f.QuietFlag = flagQuiet
 		f.InsecureFlag = flagInsecure
 
-		// Version check — skip for update, help, completion
+		// Version check — skip for update, help, completion, and shell completion hooks
 		name := cmd.Name()
-		if name == "update" || name == "help" || name == "completion" {
+		if name == "update" || name == "help" || name == "completion" ||
+			strings.HasPrefix(name, "__") {
 			return nil
 		}
 
@@ -93,8 +94,9 @@ func Execute() {
 	root := NewRootCmd()
 	if err := root.Execute(); err != nil {
 		ios := output.New()
+		jsonRequested := flagJSON != ""
 		if cliErr, ok := err.(*output.CLIError); ok {
-			if ios.OutputMode(false, false) == output.ModeJSON {
+			if jsonRequested {
 				ios.WriteJSON(output.NewErrorEnvelope(cliErr))
 			} else {
 				cliErr.WritePretty(ios.ErrOut)

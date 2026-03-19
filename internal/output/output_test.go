@@ -57,8 +57,8 @@ func TestOutputMode_TTY(t *testing.T) {
 
 func TestOutputMode_NonTTY(t *testing.T) {
 	ios := &IOStreams{Out: &bytes.Buffer{}, ErrOut: &bytes.Buffer{}, tty: false}
-	if ios.OutputMode(false, false) != ModeJSON {
-		t.Error("non-TTY default should be JSON")
+	if ios.OutputMode(false, false) != ModePretty {
+		t.Error("non-TTY default should be pretty (human-readable is always default)")
 	}
 }
 
