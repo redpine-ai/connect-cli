@@ -12,7 +12,6 @@ func NewToolsCmd(f *factory.Factory) *cobra.Command {
 	}
 	cmd.AddCommand(NewListCmd(f))
 	cmd.AddCommand(NewInfoCmd(f))
-	cmd.AddCommand(NewSchemaCmd(f))
 	cmd.AddCommand(NewCallCmd(f))
 	return cmd
 }

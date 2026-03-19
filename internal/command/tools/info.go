@@ -19,7 +19,8 @@ func NewInfoCmd(f *factory.Factory) *cobra.Command {
 		Use:   "info <tool-name>",
 		Short: "Show tool details — parameters, types, and usage",
 		Example: `  redpine tools info search
-  redpine tools info analytics--run_query`,
+  redpine tools info media--daily_briefing
+  redpine tools info media--create_workspace --json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, _ := f.Token(f.APIKeyFlag)
@@ -32,7 +33,6 @@ func NewInfoCmd(f *factory.Factory) *cobra.Command {
 
 			toolName := args[0]
 
-			// Try cache first, fall back to live fetch
 			tc := f.ToolCache()
 			allTools, cacheErr := tc.Load()
 			if cacheErr != nil {
@@ -51,7 +51,6 @@ func NewInfoCmd(f *factory.Factory) *cobra.Command {
 				tc.Save(allTools)
 			}
 
-			// Find the tool
 			var tool *mcp.Tool
 			for i := range allTools {
 				if allTools[i].Name == toolName {
@@ -61,7 +60,6 @@ func NewInfoCmd(f *factory.Factory) *cobra.Command {
 			}
 
 			if tool == nil {
-				// Fuzzy suggest
 				names := make([]string, 0, len(allTools))
 				for _, t := range allTools {
 					names = append(names, t.Name)
@@ -75,11 +73,19 @@ func NewInfoCmd(f *factory.Factory) *cobra.Command {
 			}
 
 			ios := f.IOStreams()
-			if ios.OutputMode(f.JSONFlag != "", f.PrettyFlag) == output.ModePretty {
-				renderToolInfo(ios.Out, tool, ios.Color)
-			} else {
-				ios.WriteJSON(output.NewSuccessEnvelope(tool))
+			if ios.OutputMode(f.JSONFlag != "", f.PrettyFlag) == output.ModeJSON {
+				// JSON mode: same as schema — full raw schema
+				schema := map[string]interface{}{
+					"name":        tool.Name,
+					"description": tool.Description,
+					"inputSchema": json.RawMessage(tool.InputSchema),
+				}
+				enc := json.NewEncoder(ios.Out)
+				enc.SetIndent("", "  ")
+				return enc.Encode(schema)
 			}
+
+			renderToolInfo(ios.Out, tool, ios.Color)
 			return nil
 		},
 	}
@@ -94,6 +100,7 @@ type paramInfo struct {
 	Enum        []string
 	Minimum     *float64
 	Maximum     *float64
+	Children    []paramInfo // nested object properties
 }
 
 func renderToolInfo(w io.Writer, tool *mcp.Tool, color bool) {
@@ -129,10 +136,13 @@ func renderToolInfo(w io.Writer, tool *mcp.Tool, color bool) {
 	}
 	fmt.Fprintln(w)
 
-	// Parse schema
+	// Parse schema (recursive)
 	params := parseParams(tool.InputSchema)
 	if len(params) == 0 {
 		fmt.Fprintln(w, dim("No parameters"))
+		fmt.Fprintln(w)
+		fmt.Fprintf(w, "%s\n", bold("Usage:"))
+		fmt.Fprintf(w, "  redpine tools call %s\n", tool.Name)
 		return
 	}
 
@@ -146,20 +156,18 @@ func renderToolInfo(w io.Writer, tool *mcp.Tool, color bool) {
 		}
 	}
 
-	// Print required params
 	if len(required) > 0 {
 		fmt.Fprintf(w, "%s\n", bold("Required:"))
 		for _, p := range required {
-			printParam(w, p, green, dim)
+			printParam(w, p, green, dim, "  ")
 		}
 		fmt.Fprintln(w)
 	}
 
-	// Print optional params
 	if len(optional) > 0 {
 		fmt.Fprintf(w, "%s\n", bold("Optional:"))
 		for _, p := range optional {
-			printParam(w, p, yellow, dim)
+			printParam(w, p, yellow, dim, "  ")
 		}
 		fmt.Fprintln(w)
 	}
@@ -168,15 +176,18 @@ func renderToolInfo(w io.Writer, tool *mcp.Tool, color bool) {
 	fmt.Fprintf(w, "%s\n", bold("Usage:"))
 	example := "redpine tools call " + tool.Name
 	for _, p := range required {
-		example += fmt.Sprintf(" %s=<%s>", p.Name, p.Type)
+		if p.Type == "object" {
+			example += ` --input '{"` + p.Name + `": {...}}'`
+		} else {
+			example += fmt.Sprintf(" %s=<%s>", p.Name, p.Type)
+		}
 	}
 	fmt.Fprintf(w, "  %s\n", example)
 }
 
-func printParam(w io.Writer, p paramInfo, nameColor, dimColor func(string) string) {
+func printParam(w io.Writer, p paramInfo, nameColor, dimColor func(string) string, indent string) {
 	typeStr := p.Type
 
-	// Add constraints
 	var constraints []string
 	if p.Minimum != nil && p.Maximum != nil {
 		constraints = append(constraints, fmt.Sprintf("range: %g–%g", *p.Minimum, *p.Maximum))
@@ -197,9 +208,60 @@ func printParam(w io.Writer, p paramInfo, nameColor, dimColor func(string) strin
 		constraintStr = " " + dimColor("("+strings.Join(constraints, ", ")+")")
 	}
 
-	fmt.Fprintf(w, "  %s %s%s\n", nameColor(p.Name), dimColor(typeStr), constraintStr)
+	fmt.Fprintf(w, "%s%s %s%s\n", indent, nameColor(p.Name), dimColor(typeStr), constraintStr)
 	if p.Description != "" {
-		fmt.Fprintf(w, "    %s\n", p.Description)
+		fmt.Fprintf(w, "%s  %s\n", indent, p.Description)
+	}
+
+	// Print nested children
+	if len(p.Children) > 0 {
+		for _, child := range p.Children {
+			marker := dimColor("·")
+			if child.Required {
+				marker = nameColor("·")
+			}
+			fmt.Fprintf(w, "%s  %s ", indent, marker)
+
+			childConstraints := []string{}
+			if len(child.Enum) > 0 {
+				childConstraints = append(childConstraints, strings.Join(child.Enum, ", "))
+			}
+			if child.Minimum != nil || child.Maximum != nil {
+				if child.Minimum != nil && child.Maximum != nil {
+					childConstraints = append(childConstraints, fmt.Sprintf("%g–%g", *child.Minimum, *child.Maximum))
+				} else if child.Minimum != nil {
+					childConstraints = append(childConstraints, fmt.Sprintf("min %g", *child.Minimum))
+				} else {
+					childConstraints = append(childConstraints, fmt.Sprintf("max %g", *child.Maximum))
+				}
+			}
+			if child.Default != nil {
+				childConstraints = append(childConstraints, fmt.Sprintf("default: %v", child.Default))
+			}
+
+			extra := ""
+			if len(childConstraints) > 0 {
+				extra = " " + dimColor("("+strings.Join(childConstraints, ", ")+")")
+			}
+
+			desc := ""
+			if child.Description != "" {
+				desc = " — " + child.Description
+			}
+
+			fmt.Fprintf(w, "%s %s%s%s\n", child.Name, dimColor(child.Type), extra, desc)
+
+			// Recurse one more level if needed
+			if len(child.Children) > 0 {
+				for _, grandchild := range child.Children {
+					gcDesc := ""
+					if grandchild.Description != "" {
+						gcDesc = " — " + grandchild.Description
+					}
+					fmt.Fprintf(w, "%s      %s %s%s\n", indent, grandchild.Name, dimColor(grandchild.Type), gcDesc)
+				}
+			}
+		}
 	}
 }
 
@@ -223,43 +285,10 @@ func parseParams(schema json.RawMessage) []paramInfo {
 
 	var params []paramInfo
 	for name, propRaw := range s.Properties {
-		var prop struct {
-			Type        interface{} `json:"type"`
-			Description string      `json:"description"`
-			Default     interface{} `json:"default"`
-			Enum        []string    `json:"enum"`
-			Minimum     *float64    `json:"minimum"`
-			Maximum     *float64    `json:"maximum"`
-		}
-		json.Unmarshal(propRaw, &prop)
-
-		typeStr := "any"
-		switch v := prop.Type.(type) {
-		case string:
-			typeStr = v
-		case []interface{}:
-			var types []string
-			for _, t := range v {
-				if s, ok := t.(string); ok {
-					types = append(types, s)
-				}
-			}
-			typeStr = strings.Join(types, "|")
-		}
-
-		params = append(params, paramInfo{
-			Name:        name,
-			Type:        typeStr,
-			Description: prop.Description,
-			Required:    requiredSet[name],
-			Default:     prop.Default,
-			Enum:        prop.Enum,
-			Minimum:     prop.Minimum,
-			Maximum:     prop.Maximum,
-		})
+		p := parseProperty(name, propRaw, requiredSet[name])
+		params = append(params, p)
 	}
 
-	// Sort: required first, then alphabetical
 	sort.Slice(params, func(i, j int) bool {
 		if params[i].Required != params[j].Required {
 			return params[i].Required
@@ -268,4 +297,74 @@ func parseParams(schema json.RawMessage) []paramInfo {
 	})
 
 	return params
+}
+
+func parseProperty(name string, raw json.RawMessage, required bool) paramInfo {
+	var prop struct {
+		Type        interface{}                `json:"type"`
+		Description string                     `json:"description"`
+		Default     interface{}                `json:"default"`
+		Enum        []string                   `json:"enum"`
+		Minimum     *float64                   `json:"minimum"`
+		Maximum     *float64                   `json:"maximum"`
+		Properties  map[string]json.RawMessage `json:"properties"`
+		Required    []string                   `json:"required"`
+		Items       json.RawMessage            `json:"items"`
+	}
+	json.Unmarshal(raw, &prop)
+
+	typeStr := "any"
+	switch v := prop.Type.(type) {
+	case string:
+		typeStr = v
+	case []interface{}:
+		var types []string
+		for _, t := range v {
+			if s, ok := t.(string); ok {
+				types = append(types, s)
+			}
+		}
+		typeStr = strings.Join(types, "|")
+	}
+
+	// For arrays, append item type
+	if typeStr == "array" && len(prop.Items) > 0 {
+		var itemType struct {
+			Type string `json:"type"`
+		}
+		if json.Unmarshal(prop.Items, &itemType) == nil && itemType.Type != "" {
+			typeStr = itemType.Type + "[]"
+		}
+	}
+
+	p := paramInfo{
+		Name:        name,
+		Type:        typeStr,
+		Description: prop.Description,
+		Required:    required,
+		Default:     prop.Default,
+		Enum:        prop.Enum,
+		Minimum:     prop.Minimum,
+		Maximum:     prop.Maximum,
+	}
+
+	// Recurse into nested object properties
+	if len(prop.Properties) > 0 {
+		childRequired := make(map[string]bool)
+		for _, r := range prop.Required {
+			childRequired[r] = true
+		}
+		for childName, childRaw := range prop.Properties {
+			child := parseProperty(childName, childRaw, childRequired[childName])
+			p.Children = append(p.Children, child)
+		}
+		sort.Slice(p.Children, func(i, j int) bool {
+			if p.Children[i].Required != p.Children[j].Required {
+				return p.Children[i].Required
+			}
+			return p.Children[i].Name < p.Children[j].Name
+		})
+	}
+
+	return p
 }

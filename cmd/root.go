@@ -31,12 +31,24 @@ var (
 
 func NewRootCmd() *cobra.Command {
 	root := &cobra.Command{
-		Use:                        "redpine",
-		Short:                      "Redpine CLI — MCP client for the Connect platform",
-		SilenceUsage:               true,
-		SilenceErrors:              true,
+		Use:   "redpine",
+		Short: "Redpine CLI — MCP client for the Connect platform",
+		Long: `Redpine CLI — search documents, list collections, and call upstream MCP tools.
+
+Agent quick start:
+  1. redpine tools list --json          Get all tools with full input schemas
+  2. redpine tools info <tool> --json   Get one tool's schema for param building
+  3. redpine tools call <tool> ...      Call a tool (pipe output to chain calls)
+
+Pipe chaining (auto-wires IDs between commands):
+  redpine tools call media--create_workspace --input '{"filter":{"query":"X"}}' \
+    | redpine tools call media--daily_briefing
+
+Use --json on any command for structured JSON output.`,
+		SilenceUsage:              true,
+		SilenceErrors:             true,
 		SuggestionsMinimumDistance: 2,
-		Version:                    version.Full(),
+		Version:                   version.Full(),
 	}
 
 	root.SetVersionTemplate("{{.Version}}\n")
