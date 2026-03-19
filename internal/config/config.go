@@ -14,7 +14,7 @@ const (
 // Environment URLs — not exposed in help
 var EnvURLs = map[string]string{
 	"production": "https://api.redpine.ai",
-	"staging":    "https://connect-api-staging-667027452682.europe-west1.run.app",
+	"staging":    "https://api-staging.redpine.ai",
 }
 
 type Config struct {
