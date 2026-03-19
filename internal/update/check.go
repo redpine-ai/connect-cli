@@ -53,7 +53,7 @@ func Check(cacheDir string) *CheckResult {
 	return &CheckResult{
 		Current:    current,
 		Latest:     latest,
-		IsOutdated: latest != current,
+		IsOutdated: isOlder(current, latest),
 	}
 }
 
@@ -99,6 +99,32 @@ func fetchLatestVersion() string {
 		return ""
 	}
 	return strings.TrimPrefix(release.TagName, "v")
+}
+
+// isOlder returns true if current is strictly older than latest using semver comparison.
+func isOlder(current, latest string) bool {
+	cp := parseSemver(current)
+	lp := parseSemver(latest)
+	if cp[0] != lp[0] {
+		return cp[0] < lp[0]
+	}
+	if cp[1] != lp[1] {
+		return cp[1] < lp[1]
+	}
+	return cp[2] < lp[2]
+}
+
+func parseSemver(v string) [3]int {
+	v = strings.TrimPrefix(v, "v")
+	parts := strings.SplitN(v, ".", 3)
+	var result [3]int
+	for i, p := range parts {
+		if i >= 3 {
+			break
+		}
+		fmt.Sscanf(p, "%d", &result[i])
+	}
+	return result
 }
 
 // FormatWarning returns a stderr message for outdated versions.
