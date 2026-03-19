@@ -1,65 +1,69 @@
 # Connect CLI
 
-A fast, agent-optimized CLI for the [Connect](https://redpine.ai) platform. Speaks MCP (Model Context Protocol) to discover and call tools — both built-in search and any upstream MCP servers registered on your Connect instance.
+MCP client for [Redpine Connect](https://app.redpine.ai). Search documents, list collections, and call upstream MCP tools from the terminal.
+
+Built for agents — JSON output by default when piped, human-readable in the terminal.
 
 ## Install
 
 ```bash
-# Homebrew
-brew install redpine/tap/connect-cli
-
-# Direct download
-curl -fsSL https://get.redpine.ai/cli | sh
+brew install redpine-ai/tap/connect-cli
 ```
 
-## Quick Start
+## Usage
 
 ```bash
-# Authenticate
-connect auth set-key sk_live_your_api_key
+# authenticate
+connect auth login                # browser-based OAuth
+connect auth set-key sk_live_...  # or use an API key
 
-# Search documents
-connect search "authentication best practices"
+# search
+connect search "how does authentication work"
+connect search "rate limiting" --collection api-docs --limit 5
 
-# List collections
+# collections
 connect collections list
 
-# List upstream MCP tools
+# upstream MCP tools
 connect tools list
+connect tools call analytics--run_query query="SELECT * FROM events" limit=10
 
-# Call an upstream tool
-connect tools call analytics--run_query query="SELECT * FROM events"
+# pass JSON input (useful for agents)
+echo '{"query": "test"}' | connect tools call analytics--run_query
+connect tools call analytics--run_query --input '{"query": "test"}'
 ```
 
-## Agent Usage
+## Output
 
-The CLI outputs JSON by default when piped or used non-interactively:
+Terminal (TTY) gets human-readable output. Pipes and scripts get JSON.
 
 ```bash
-# Structured JSON output (automatic in non-TTY)
+# automatic — JSON when piped
 connect search "query" | jq '.data'
 
-# Explicit JSON with field selection
-connect tools list --json name,description
+# force JSON in terminal
+connect search "query" --json
 
-# Exit codes for scripting
-connect update --check && echo "up to date" || echo "update available"
+# force human-readable in pipes
+connect search "query" --pretty
 ```
 
-## Auth
+JSON responses follow a consistent envelope:
 
-```bash
-connect auth login          # Browser-based OAuth
-connect auth set-key <key>  # Store API key
-connect auth status         # Check auth state
-connect auth logout         # Clear credentials
+```json
+{"status": "ok", "data": { ... }}
+{"status": "error", "error": {"code": "...", "message": "...", "suggestions": [...]}}
 ```
 
-Or use environment variables:
-```bash
-export CONNECT_API_KEY=sk_live_...
-export CONNECT_SERVER_URL=https://api.redpine.ai
-```
+Exit codes: `0` success, `1` error, `2` auth, `3` bad input, `4` server error.
+
+## Environment variables
+
+| Variable | Description |
+|----------|-------------|
+| `CONNECT_API_KEY` | API key (skips `connect auth login`) |
+| `CONNECT_SERVER_URL` | Server URL override |
+| `NO_COLOR` | Disable colored output |
 
 ## License
 
