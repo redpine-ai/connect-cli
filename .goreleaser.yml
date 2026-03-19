@@ -50,6 +50,9 @@ brews:
     install: |
       bin.install "connect"
 
-      bash_completion.install Utils.safe_popen_read(bin/"connect", "completion", "bash") => "connect"
-      zsh_completion.install Utils.safe_popen_read(bin/"connect", "completion", "zsh") => "_connect"
-      fish_completion.install Utils.safe_popen_read(bin/"connect", "completion", "fish") => "connect.fish"
+      output = Utils.safe_popen_read(bin/"connect", "completion", "bash")
+      (bash_completion/"connect").write output
+      output = Utils.safe_popen_read(bin/"connect", "completion", "zsh")
+      (zsh_completion/"_connect").write output
+      output = Utils.safe_popen_read(bin/"connect", "completion", "fish")
+      (fish_completion/"connect.fish").write output
