@@ -56,7 +56,34 @@ func NewCallCmd(f *factory.Factory) *cobra.Command {
 				}
 			}
 
-			toolArgs, err := parseToolArgs(args[1:], inputJSON, stdinData)
+			// Load tool schema for auto-wiring and validation
+			tc := f.ToolCache()
+			cachedTools, cacheErr := tc.Load()
+
+			// If cache miss and we have piped data, fetch live to get schemas
+			if cacheErr != nil && len(stdinData) > 0 {
+				client, sc, clientErr := f.MCPClientWithSession(token)
+				if clientErr == nil {
+					defer sc.Save(client.SessionID())
+					if freshTools, listErr := client.ListTools(); listErr == nil {
+						tc.Save(freshTools)
+						cachedTools = freshTools
+						cacheErr = nil
+					}
+				}
+			}
+
+			var acceptedParams map[string]bool
+			if cacheErr == nil {
+				for _, t := range cachedTools {
+					if t.Name == toolName {
+						acceptedParams = schemaParamNames(t.InputSchema)
+						break
+					}
+				}
+			}
+
+			toolArgs, err := parseToolArgs(args[1:], inputJSON, stdinData, acceptedParams)
 			if err != nil {
 				return &output.CLIError{Code: "invalid_input", Message: err.Error(), ExitCode: output.ExitInput}
 			}
@@ -83,8 +110,6 @@ func NewCallCmd(f *factory.Factory) *cobra.Command {
 			}
 
 			// Validate against cached tool schemas
-			tc := f.ToolCache()
-			cachedTools, cacheErr := tc.Load()
 			if cacheErr == nil {
 				if valErr := validateToolName(toolName, cachedTools); valErr != nil {
 					vErr := valErr.(*toolValidationError)
@@ -135,7 +160,7 @@ func NewCallCmd(f *factory.Factory) *cobra.Command {
 	return cmd
 }
 
-func parseToolArgs(kvArgs []string, jsonInput string, stdinData []byte) (map[string]interface{}, error) {
+func parseToolArgs(kvArgs []string, jsonInput string, stdinData []byte, acceptedParams map[string]bool) (map[string]interface{}, error) {
 	// Priority: explicit --input JSON > key=value args > piped stdin auto-wire
 	if jsonInput != "" {
 		var result map[string]interface{}
@@ -147,15 +172,17 @@ func parseToolArgs(kvArgs []string, jsonInput string, stdinData []byte) (map[str
 
 	result := make(map[string]interface{})
 
-	// Auto-wire: extract fields from piped stdin (previous command's output)
+	// Auto-wire: extract fields from piped stdin, filtered to accepted params only
 	if len(stdinData) > 0 {
 		piped := extractPipedFields(stdinData)
 		for k, v := range piped {
-			result[k] = v
+			if acceptedParams == nil || acceptedParams[k] {
+				result[k] = v
+			}
 		}
 	}
 
-	// Key=value args override piped values
+	// Key=value args override piped values (these are explicit, no filtering)
 	for _, arg := range kvArgs {
 		parts := strings.SplitN(arg, "=", 2)
 		if len(parts) != 2 {
@@ -164,6 +191,21 @@ func parseToolArgs(kvArgs []string, jsonInput string, stdinData []byte) (map[str
 		result[parts[0]] = coerceValue(parts[1])
 	}
 	return result, nil
+}
+
+// schemaParamNames extracts top-level property names from a JSON schema.
+func schemaParamNames(schema json.RawMessage) map[string]bool {
+	var s struct {
+		Properties map[string]json.RawMessage `json:"properties"`
+	}
+	if err := json.Unmarshal(schema, &s); err != nil {
+		return nil
+	}
+	names := make(map[string]bool, len(s.Properties))
+	for name := range s.Properties {
+		names[name] = true
+	}
+	return names
 }
 
 // extractPipedFields parses piped JSON from a previous command and extracts
