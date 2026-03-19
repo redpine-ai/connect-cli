@@ -46,7 +46,7 @@ func TestSessionCache_FileNameIsHash(t *testing.T) {
 	sc := NewSessionCache(dir, "https://api.example.com")
 
 	hash := fmt.Sprintf("%x", sha256.Sum256([]byte("https://api.example.com")))
-	expected := filepath.Join(dir, "connect-session-"+hash[:16])
+	expected := filepath.Join(dir, "redpine-session-"+hash[:16])
 
 	if sc.path != expected {
 		t.Errorf("path = %q, want %q", sc.path, expected)

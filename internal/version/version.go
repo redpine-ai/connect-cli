@@ -6,5 +6,5 @@ var (
 )
 
 func Full() string {
-	return "connect " + Version + " (" + Commit + ")"
+	return "redpine " + Version + " (" + Commit + ")"
 }

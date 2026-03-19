@@ -19,10 +19,10 @@ type Config struct {
 
 func ConfigDir() string {
 	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
-		return filepath.Join(xdg, "connect")
+		return filepath.Join(xdg, "redpine")
 	}
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".config", "connect")
+	return filepath.Join(home, ".config", "redpine")
 }
 
 func Load() (*Config, error) {

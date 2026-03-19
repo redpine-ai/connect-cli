@@ -31,8 +31,8 @@ var (
 
 func NewRootCmd() *cobra.Command {
 	root := &cobra.Command{
-		Use:                        "connect",
-		Short:                      "Connect CLI — MCP client for the Connect platform",
+		Use:                        "redpine",
+		Short:                      "Redpine CLI — MCP client for the Connect platform",
 		SilenceUsage:               true,
 		SilenceErrors:              true,
 		SuggestionsMinimumDistance: 2,
@@ -130,7 +130,7 @@ func findSuggestions(root *cobra.Command, errMsg string) string {
 	}
 	unknown := rest[:end]
 
-	// Also check for subcommand context: `unknown command "logie" for "connect auth"`
+	// Also check for subcommand context: `unknown command "logie" for "redpine auth"`
 	// Find the parent command
 	cmd := root
 	const forPrefix = "\" for \""

@@ -18,15 +18,15 @@ func NewInfoCmd(f *factory.Factory) *cobra.Command {
 	return &cobra.Command{
 		Use:   "info <tool-name>",
 		Short: "Show tool details — parameters, types, and usage",
-		Example: `  connect tools info search
-  connect tools info analytics--run_query`,
+		Example: `  redpine tools info search
+  redpine tools info analytics--run_query`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, _ := f.Token(f.APIKeyFlag)
 			if token == "" {
 				return &output.CLIError{
 					Code: "not_authenticated", Message: "Not authenticated",
-					Hint: "Run 'connect auth login' or set CONNECT_API_KEY", ExitCode: output.ExitAuth,
+					Hint: "Run 'redpine auth login' or set CONNECT_API_KEY", ExitCode: output.ExitAuth,
 				}
 			}
 
@@ -66,7 +66,7 @@ func NewInfoCmd(f *factory.Factory) *cobra.Command {
 				suggestions := fuzzy.ClosestMatches(toolName, names, 3)
 				return &output.CLIError{
 					Code: "tool_not_found", Message: fmt.Sprintf("Tool '%s' not found", toolName),
-					Suggestions: suggestions, Hint: "Run 'connect tools list' to see available tools",
+					Suggestions: suggestions, Hint: "Run 'redpine tools list' to see available tools",
 					ExitCode: output.ExitInput,
 				}
 			}
@@ -163,7 +163,7 @@ func renderToolInfo(w io.Writer, tool *mcp.Tool, color bool) {
 
 	// Usage example
 	fmt.Fprintf(w, "%s\n", bold("Usage:"))
-	example := "connect tools call " + tool.Name
+	example := "redpine tools call " + tool.Name
 	for _, p := range required {
 		example += fmt.Sprintf(" %s=<%s>", p.Name, p.Type)
 	}

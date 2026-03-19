@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	keyringService = "connect-cli"
+	keyringService = "redpine-cli"
 	keyringUser    = "default"
 	keyringTimeout = 3 * time.Second
 )

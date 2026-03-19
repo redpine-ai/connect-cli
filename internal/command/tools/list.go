@@ -14,14 +14,14 @@ func NewListCmd(f *factory.Factory) *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
 		Short: "List available upstream MCP tools",
-		Example: `  connect tools list
-  connect tools list --json`,
+		Example: `  redpine tools list
+  redpine tools list --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, _ := f.Token(f.APIKeyFlag)
 			if token == "" {
 				return &output.CLIError{
 					Code: "not_authenticated", Message: "Not authenticated",
-					Hint: "Run 'connect auth login' or set CONNECT_API_KEY", ExitCode: output.ExitAuth,
+					Hint: "Run 'redpine auth login' or set CONNECT_API_KEY", ExitCode: output.ExitAuth,
 				}
 			}
 			client, sc, err := f.MCPClientWithSession(token)
@@ -58,7 +58,7 @@ func NewListCmd(f *factory.Factory) *cobra.Command {
 						fmt.Fprintf(ios.Out, "  %-25s %s\n", t.Name, t.Description)
 					}
 					fmt.Fprintln(ios.Out)
-					fmt.Fprintln(ios.Out, "Run 'connect search' and 'connect collections list' to use built-in tools.")
+					fmt.Fprintln(ios.Out, "Run 'redpine search' and 'redpine collections list' to use built-in tools.")
 				}
 			} else {
 				ios.WriteJSON(output.NewSuccessEnvelope(map[string]interface{}{

@@ -123,5 +123,5 @@ func parseSemver(v string) [3]int {
 
 // FormatWarning returns a stderr message for outdated versions.
 func (r *CheckResult) FormatWarning() string {
-	return fmt.Sprintf("Update required: v%s → v%s. Run: connect update", r.Current, r.Latest)
+	return fmt.Sprintf("Update required: v%s → v%s. Run: redpine update", r.Current, r.Latest)
 }

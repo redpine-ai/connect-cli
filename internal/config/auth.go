@@ -58,7 +58,7 @@ func RefreshOAuthToken(kr Keyring) (string, error) {
 	dir := ConfigDir()
 	creds, err := LoadCredentialsFrom(dir)
 	if err != nil || creds.RefreshToken == "" || creds.ClientID == "" {
-		return "", errors.New("no refresh token available — run 'connect auth login'")
+		return "", errors.New("no refresh token available — run 'redpine auth login'")
 	}
 
 	serverURL := creds.ServerURL
@@ -78,7 +78,7 @@ func RefreshOAuthToken(kr Keyring) (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return "", errors.New("refresh token expired — run 'connect auth login'")
+		return "", errors.New("refresh token expired — run 'redpine auth login'")
 	}
 
 	var result struct {

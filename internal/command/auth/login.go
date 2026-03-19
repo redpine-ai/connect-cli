@@ -32,7 +32,7 @@ func NewLoginCmd(f *factory.Factory) *cobra.Command {
 				return &output.CLIError{
 					Code:     "non_interactive",
 					Message:  "Cannot use browser login in non-interactive mode",
-					Hint:     "Set CONNECT_API_KEY or use 'connect auth set-key'",
+					Hint:     "Set CONNECT_API_KEY or use 'redpine auth set-key'",
 					ExitCode: output.ExitAuth,
 				}
 			}
@@ -97,7 +97,7 @@ func NewLoginCmd(f *factory.Factory) *cobra.Command {
 			// 2. Register client
 			fmt.Fprintln(ios.ErrOut, "Registering client...")
 			regBody, _ := json.Marshal(map[string]interface{}{
-				"client_name":    "Connect CLI",
+				"client_name":    "Redpine CLI",
 				"redirect_uris":  []string{callbackURL},
 				"grant_types":    []string{"authorization_code", "refresh_token"},
 				"response_types": []string{"code"},
@@ -162,7 +162,7 @@ func NewLoginCmd(f *factory.Factory) *cobra.Command {
 			case errMsg := <-errCh:
 				return &output.CLIError{Code: "auth_error", Message: errMsg, ExitCode: output.ExitAuth}
 			case <-time.After(5 * time.Minute):
-				return &output.CLIError{Code: "timeout", Message: "Authentication timed out (5 minutes)", Hint: "Try again with 'connect auth login'", ExitCode: output.ExitAuth}
+				return &output.CLIError{Code: "timeout", Message: "Authentication timed out (5 minutes)", Hint: "Try again with 'redpine auth login'", ExitCode: output.ExitAuth}
 			}
 
 			// 6. Exchange code for token

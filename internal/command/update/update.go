@@ -34,7 +34,7 @@ func NewUpdateCmd(f *factory.Factory) *cobra.Command {
 	var checkOnly bool
 	cmd := &cobra.Command{
 		Use:   "update",
-		Short: "Update connect CLI to the latest version",
+		Short: "Update Redpine CLI to the latest version",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ios := f.IOStreams()
 			release, err := getLatestRelease()
@@ -57,7 +57,7 @@ func NewUpdateCmd(f *factory.Factory) *cobra.Command {
 			if checkOnly {
 				return &output.CLIError{
 					Code: "update_available", Message: fmt.Sprintf("Update available: v%s → v%s", current, latest),
-					Hint: "Run 'connect update' to install", ExitCode: 1,
+					Hint: "Run 'redpine update' to install", ExitCode: 1,
 				}
 			}
 
@@ -100,9 +100,9 @@ func NewUpdateCmd(f *factory.Factory) *cobra.Command {
 			// Extract binary from archive
 			var binaryData []byte
 			if strings.HasSuffix(assetName, ".tar.gz") {
-				binaryData, err = extractFromTarGz(archiveData, "connect")
+				binaryData, err = extractFromTarGz(archiveData, "redpine")
 			} else if strings.HasSuffix(assetName, ".zip") {
-				binaryData, err = extractFromZip(archiveData, "connect.exe")
+				binaryData, err = extractFromZip(archiveData, "redpine.exe")
 			} else {
 				err = fmt.Errorf("unknown archive format: %s", assetName)
 			}

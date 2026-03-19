@@ -19,7 +19,7 @@ func TestCLIError_WritePretty(t *testing.T) {
 		Code:        "tool_not_found",
 		Message:     "Upstream 'alleas' not found",
 		Suggestions: []string{"allears"},
-		Hint:        "Run 'connect tools list'",
+		Hint:        "Run 'redpine tools list'",
 	}
 	err.WritePretty(&buf)
 
@@ -30,7 +30,7 @@ func TestCLIError_WritePretty(t *testing.T) {
 	if !strings.Contains(out, "allears") {
 		t.Error("should contain suggestion")
 	}
-	if !strings.Contains(out, "connect tools list") {
+	if !strings.Contains(out, "redpine tools list") {
 		t.Error("should contain hint")
 	}
 }

@@ -23,7 +23,7 @@ func NewStatusCmd(f *factory.Factory) *cobra.Command {
 				return &output.CLIError{
 					Code:     "not_authenticated",
 					Message:  "Not authenticated",
-					Hint:     "Run 'connect auth login' or set CONNECT_API_KEY",
+					Hint:     "Run 'redpine auth login' or set CONNECT_API_KEY",
 					ExitCode: output.ExitAuth,
 				}
 			}

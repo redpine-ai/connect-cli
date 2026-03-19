@@ -15,7 +15,7 @@ type SessionCache struct {
 func NewSessionCache(dir, serverURL string) *SessionCache {
 	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(serverURL)))
 	return &SessionCache{
-		path: filepath.Join(dir, "connect-session-"+hash[:16]),
+		path: filepath.Join(dir, "redpine-session-"+hash[:16]),
 	}
 }
 

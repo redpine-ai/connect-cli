@@ -30,16 +30,16 @@ func NewCallCmd(f *factory.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "call <tool-name> [key=value...]",
 		Short: "Call an upstream MCP tool",
-		Example: `  connect tools call analytics--run_query query="SELECT *" limit=10
-  echo '{"query": "test"}' | connect tools call analytics--run_query
-  connect tools call analytics--run_query --input '{"query": "test"}'`,
+		Example: `  redpine tools call analytics--run_query query="SELECT *" limit=10
+  echo '{"query": "test"}' | redpine tools call analytics--run_query
+  redpine tools call analytics--run_query --input '{"query": "test"}'`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, _ := f.Token(f.APIKeyFlag)
 			if token == "" {
 				return &output.CLIError{
 					Code: "not_authenticated", Message: "Not authenticated",
-					Hint: "Run 'connect auth login' or set CONNECT_API_KEY", ExitCode: output.ExitAuth,
+					Hint: "Run 'redpine auth login' or set CONNECT_API_KEY", ExitCode: output.ExitAuth,
 				}
 			}
 
@@ -170,7 +170,7 @@ func validateToolName(name string, tools []mcp.Tool) error {
 			suggestions := fuzzy.ClosestMatches(prefix, prefixList, 3)
 			return &toolValidationError{
 				Code: "prefix_not_found", Message: fmt.Sprintf("Upstream '%s' not found", prefix),
-				Suggestions: suggestions, Hint: "Run 'connect tools list' to see available tools",
+				Suggestions: suggestions, Hint: "Run 'redpine tools list' to see available tools",
 			}
 		}
 		suggestions := fuzzy.ClosestMatches(toolPart, prefixes[prefix], 3)
@@ -186,7 +186,7 @@ func validateToolName(name string, tools []mcp.Tool) error {
 	suggestions := fuzzy.ClosestMatches(name, allNames, 3)
 	return &toolValidationError{
 		Code: "tool_not_found", Message: fmt.Sprintf("Tool '%s' not found", name),
-		Suggestions: suggestions, Hint: "Run 'connect tools list' to see available tools",
+		Suggestions: suggestions, Hint: "Run 'redpine tools list' to see available tools",
 	}
 }
 
@@ -219,7 +219,7 @@ func validateParams(args map[string]interface{}, schema json.RawMessage) error {
 			return &output.CLIError{
 				Code:     "missing_param",
 				Message:  fmt.Sprintf("Missing required parameter '%s'", req),
-				Hint:     fmt.Sprintf("Required: %s. Optional: %s. Run 'connect tools info <tool>' for details", strings.Join(s.Required, ", "), strings.Join(optionals, ", ")),
+				Hint:     fmt.Sprintf("Required: %s. Optional: %s. Run 'redpine tools info <tool>' for details", strings.Join(s.Required, ", "), strings.Join(optionals, ", ")),
 				ExitCode: output.ExitInput,
 			}
 		}
@@ -242,7 +242,7 @@ func validateParams(args map[string]interface{}, schema json.RawMessage) error {
 				Code:        "unknown_param",
 				Message:     fmt.Sprintf("Unknown parameter '%s'", param),
 				Suggestions: suggestions,
-				Hint:        fmt.Sprintf("Known parameters: %s. Run 'connect tools info <tool>' for details", strings.Join(knownParams, ", ")),
+				Hint:        fmt.Sprintf("Known parameters: %s. Run 'redpine tools info <tool>' for details", strings.Join(knownParams, ", ")),
 				ExitCode:    output.ExitInput,
 			}
 		}

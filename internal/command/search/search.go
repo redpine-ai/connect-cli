@@ -15,15 +15,15 @@ func NewSearchCmd(f *factory.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "search <collection> <query>",
 		Short: "Search documents in a collection",
-		Example: `  connect search redpine-test "how does authentication work"
-  connect search api-docs "rate limiting" --limit 5`,
+		Example: `  redpine search redpine-test "how does authentication work"
+  redpine search api-docs "rate limiting" --limit 5`,
 		Args: cobra.MinimumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, _ := f.Token(f.APIKeyFlag)
 			if token == "" {
 				return &output.CLIError{
 					Code: "not_authenticated", Message: "Not authenticated",
-					Hint: "Run 'connect auth login' or set CONNECT_API_KEY", ExitCode: output.ExitAuth,
+					Hint: "Run 'redpine auth login' or set CONNECT_API_KEY", ExitCode: output.ExitAuth,
 				}
 			}
 			client, sc, err := f.MCPClientWithSession(token)

@@ -2,7 +2,7 @@ version: 2
 
 builds:
   - main: .
-    binary: connect
+    binary: redpine
     env:
       - CGO_ENABLED=0
     ldflags:
@@ -48,11 +48,11 @@ brews:
     description: "CLI for the Connect platform — MCP client for AI agents"
     license: "MIT"
     install: |
-      bin.install "connect"
+      bin.install "redpine"
 
-      output = Utils.safe_popen_read(bin/"connect", "completion", "bash")
-      (bash_completion/"connect").write output
-      output = Utils.safe_popen_read(bin/"connect", "completion", "zsh")
-      (zsh_completion/"_connect").write output
-      output = Utils.safe_popen_read(bin/"connect", "completion", "fish")
-      (fish_completion/"connect.fish").write output
+      output = Utils.safe_popen_read(bin/"redpine", "completion", "bash")
+      (bash_completion/"redpine").write output
+      output = Utils.safe_popen_read(bin/"redpine", "completion", "zsh")
+      (zsh_completion/"_redpine").write output
+      output = Utils.safe_popen_read(bin/"redpine", "completion", "fish")
+      (fish_completion/"redpine.fish").write output

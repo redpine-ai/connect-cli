@@ -33,7 +33,7 @@ func NewSetKeyCmd(f *factory.Factory, configDir string) *cobra.Command {
 				return &output.CLIError{
 					Code:     "invalid_input",
 					Message:  "No API key provided",
-					Hint:     "Usage: connect auth set-key <key> or echo <key> | connect auth set-key",
+					Hint:     "Usage: redpine auth set-key <key> or echo <key> | redpine auth set-key",
 					ExitCode: output.ExitInput,
 				}
 			}
