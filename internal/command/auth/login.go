@@ -191,14 +191,21 @@ func NewLoginCmd(f *factory.Factory) *cobra.Command {
 				return &output.CLIError{Code: "token_error", Message: "Failed to parse token response", ExitCode: output.ExitServer}
 			}
 
-			// 7. Store token
+			// 7. Store token + refresh token
 			kr := f.Keyring()
-			if err := kr.Set(tokenResult.AccessToken); err != nil {
-				// Fallback to file
-				creds := &config.Credentials{Token: tokenResult.AccessToken, Type: "oauth"}
-				if err := creds.SaveTo(config.ConfigDir()); err != nil {
-					return &output.CLIError{Code: "store_error", Message: fmt.Sprintf("Failed to store token: %s", err), ExitCode: output.ExitError}
-				}
+			kr.Set(tokenResult.AccessToken) // best-effort keyring
+
+			// Always save to file — refresh token needed for auto-refresh
+			creds := &config.Credentials{
+				Token:        tokenResult.AccessToken,
+				Type:         "oauth",
+				RefreshToken: tokenResult.RefreshToken,
+				ClientID:     regResult.ClientID,
+				ClientSecret: regResult.ClientSecret,
+				ServerURL:    serverURL,
+			}
+			if err := creds.SaveTo(config.ConfigDir()); err != nil {
+				return &output.CLIError{Code: "store_error", Message: fmt.Sprintf("Failed to store credentials: %s", err), ExitCode: output.ExitError}
 			}
 
 			fmt.Fprintln(ios.ErrOut, "Authentication successful!")

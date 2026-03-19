@@ -3,6 +3,7 @@ package factory
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/redpine-ai/connect-cli/internal/cache"
 	"github.com/redpine-ai/connect-cli/internal/config"
@@ -107,6 +108,18 @@ func (f *Factory) MCPClientWithSession(token string) (*mcp.Client, *mcp.SessionC
 
 	// Cold start — initialize
 	if err := client.Initialize(); err != nil {
+		// If 401, try refreshing the OAuth token
+		if strings.Contains(err.Error(), "401") || strings.Contains(strings.ToLower(err.Error()), "unauthorized") {
+			newToken, refreshErr := config.RefreshOAuthToken(f.Keyring())
+			if refreshErr == nil && newToken != "" {
+				client = mcp.NewClient(serverURL, newToken, f.InsecureFlag)
+				if err := client.Initialize(); err != nil {
+					return nil, nil, err
+				}
+				sc.Save(client.SessionID())
+				return client, sc, nil
+			}
+		}
 		return nil, nil, err
 	}
 	sc.Save(client.SessionID())
