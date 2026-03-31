@@ -65,7 +65,7 @@ func NewCallCmd(f *factory.Factory) *cobra.Command {
 				client, sc, clientErr := f.MCPClientWithSession(token)
 				if clientErr == nil {
 					defer sc.Save(client.SessionID())
-					if freshTools, listErr := client.ListTools(); listErr == nil {
+					if freshTools, listErr := client.FindTools("", ""); listErr == nil {
 						tc.Save(freshTools)
 						cachedTools = freshTools
 						cacheErr = nil
@@ -135,7 +135,7 @@ func NewCallCmd(f *factory.Factory) *cobra.Command {
 			defer sc.Save(client.SessionID())
 
 			if cacheErr != nil {
-				freshTools, listErr := client.ListTools()
+				freshTools, listErr := client.FindTools("", "")
 				if listErr == nil {
 					tc.Save(freshTools)
 				}
