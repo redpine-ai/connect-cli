@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 )
 
@@ -82,6 +83,80 @@ func TestClient_CallTool(t *testing.T) {
 	}
 	if result == nil {
 		t.Fatal("nil result")
+	}
+}
+
+func TestClient_FindTools(t *testing.T) {
+	toolsJSON := `[{"name":"search","description":"Search docs","inputSchema":{"type":"object","properties":{"query":{"type":"string"}},"required":["query"]}},{"name":"aviation--aircraft_finder","description":"Find aircraft","inputSchema":{"type":"object","properties":{},"required":[]}}]`
+	callResult := `{"content":[{"type":"text","text":` + strconv.Quote(toolsJSON) + `}]}`
+
+	server := newMockMCPServer(t, map[string]json.RawMessage{
+		"initialize": json.RawMessage(`{"protocolVersion":"2025-03-26","serverInfo":{"name":"test"},"capabilities":{}}`),
+		"tools/call": json.RawMessage(callResult),
+	})
+	defer server.Close()
+
+	client := NewClient(server.URL, "token")
+	if err := client.Initialize(); err != nil {
+		t.Fatal(err)
+	}
+
+	tools, err := client.FindTools("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(tools) != 2 {
+		t.Errorf("got %d tools, want 2", len(tools))
+	}
+	if tools[0].Name != "search" {
+		t.Errorf("got name %q, want %q", tools[0].Name, "search")
+	}
+}
+
+func TestClient_FindToolsWithQuery(t *testing.T) {
+	toolsJSON := `[{"name":"aviation--aircraft_finder","description":"Find aircraft","inputSchema":{}}]`
+	callResult := `{"content":[{"type":"text","text":` + strconv.Quote(toolsJSON) + `}]}`
+
+	server := newMockMCPServer(t, map[string]json.RawMessage{
+		"initialize": json.RawMessage(`{"protocolVersion":"2025-03-26","serverInfo":{"name":"test"},"capabilities":{}}`),
+		"tools/call": json.RawMessage(callResult),
+	})
+	defer server.Close()
+
+	client := NewClient(server.URL, "token")
+	client.Initialize()
+
+	tools, err := client.FindTools("aircraft", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(tools) != 1 {
+		t.Errorf("got %d tools, want 1", len(tools))
+	}
+}
+
+func TestClient_InspectTool(t *testing.T) {
+	toolJSON := `{"name":"search","description":"Search docs","inputSchema":{"type":"object","properties":{"query":{"type":"string","description":"Search query"}},"required":["query"]},"annotations":{"readOnlyHint":true}}`
+	callResult := `{"content":[{"type":"text","text":` + strconv.Quote(toolJSON) + `}]}`
+
+	server := newMockMCPServer(t, map[string]json.RawMessage{
+		"initialize": json.RawMessage(`{"protocolVersion":"2025-03-26","serverInfo":{"name":"test"},"capabilities":{}}`),
+		"tools/call": json.RawMessage(callResult),
+	})
+	defer server.Close()
+
+	client := NewClient(server.URL, "token")
+	client.Initialize()
+
+	tool, err := client.InspectTool("search")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tool == nil {
+		t.Fatal("nil tool")
+	}
+	if tool.Name != "search" {
+		t.Errorf("got name %q, want %q", tool.Name, "search")
 	}
 }
 

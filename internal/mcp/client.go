@@ -125,6 +125,57 @@ func (c *Client) CallTool(name string, args map[string]interface{}) (*ToolCallRe
 	return &result, nil
 }
 
+// FindTools calls the find-tools meta-tool with format=json and returns
+// structured tool data. Pass empty strings to list all tools.
+func (c *Client) FindTools(query, integration string) ([]Tool, error) {
+	args := map[string]interface{}{"format": "json"}
+	if query != "" {
+		args["query"] = query
+	}
+	if integration != "" {
+		args["integration"] = integration
+	}
+
+	result, err := c.CallTool("find-tools", args)
+	if err != nil {
+		return nil, fmt.Errorf("find-tools failed: %w", err)
+	}
+
+	for _, block := range result.Content {
+		if block.Type == "text" && block.Text != "" {
+			var tools []Tool
+			if err := json.Unmarshal([]byte(block.Text), &tools); err != nil {
+				return nil, fmt.Errorf("find-tools returned invalid JSON: %w", err)
+			}
+			return tools, nil
+		}
+	}
+	return nil, fmt.Errorf("find-tools returned no content")
+}
+
+// InspectTool calls the inspect-tool meta-tool with format=json and returns
+// the full tool schema.
+func (c *Client) InspectTool(toolName string) (*Tool, error) {
+	result, err := c.CallTool("inspect-tool", map[string]interface{}{
+		"tool_name": toolName,
+		"format":    "json",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("inspect-tool failed: %w", err)
+	}
+
+	for _, block := range result.Content {
+		if block.Type == "text" && block.Text != "" {
+			var tool Tool
+			if err := json.Unmarshal([]byte(block.Text), &tool); err != nil {
+				return nil, fmt.Errorf("inspect-tool returned invalid JSON: %w", err)
+			}
+			return &tool, nil
+		}
+	}
+	return nil, fmt.Errorf("inspect-tool returned no content")
+}
+
 func (c *Client) DeleteSession() error {
 	return c.transport.Delete()
 }
