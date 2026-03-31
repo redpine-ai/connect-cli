@@ -76,7 +76,7 @@ func NewListCmd(f *factory.Factory) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&query, "query", "q", "", "Search tools by keyword")
-	cmd.Flags().StringVarP(&integration, "integration", "i", "", "Filter by integration prefix")
+	cmd.Flags().StringVar(&query, "query", "", "Search tools by keyword")
+	cmd.Flags().StringVar(&integration, "integration", "", "Filter by integration prefix")
 	return cmd
 }
