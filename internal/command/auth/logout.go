@@ -22,7 +22,7 @@ func NewLogoutCmd(f *factory.Factory) *cobra.Command {
 				cfg, _ := f.Config()
 				serverURL := f.ServerFlag
 				if serverURL == "" {
-					serverURL = cfg.ServerURL
+					serverURL = cfg.ServerURLForEnv()
 				}
 				sc := mcp.DefaultSessionCache(serverURL)
 				if sid := sc.Load(); sid != "" {

@@ -47,7 +47,7 @@ func NewLoginCmd(f *factory.Factory) *cobra.Command {
 				serverURL = os.Getenv("CONNECT_SERVER_URL")
 			}
 			if serverURL == "" {
-				serverURL = cfg.ServerURL
+				serverURL = cfg.ServerURLForEnv()
 			}
 			serverURL = strings.TrimSuffix(serverURL, "/")
 
