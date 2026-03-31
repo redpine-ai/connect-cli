@@ -2,12 +2,16 @@ package tools
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/redpine-ai/connect-cli/internal/factory"
 	"github.com/redpine-ai/connect-cli/internal/mcp"
 	"github.com/redpine-ai/connect-cli/internal/output"
 	"github.com/spf13/cobra"
 )
+
+var multiSpaceRe = regexp.MustCompile(`\s+`)
 
 func NewListCmd(f *factory.Factory) *cobra.Command {
 	var query string
@@ -53,10 +57,7 @@ func NewListCmd(f *factory.Factory) *cobra.Command {
 					headers := []string{"TOOL", "DESCRIPTION"}
 					var rows [][]string
 					for _, t := range allTools {
-						desc := t.Description
-						if len(desc) > 80 {
-							desc = desc[:77] + "..."
-						}
+						desc := shortDesc(t.Description)
 						rows = append(rows, []string{t.Name, desc})
 					}
 					output.RenderTable(ios.Out, headers, rows)
@@ -79,4 +80,23 @@ func NewListCmd(f *factory.Factory) *cobra.Command {
 	cmd.Flags().StringVar(&query, "query", "", "Search tools by keyword")
 	cmd.Flags().StringVar(&integration, "integration", "", "Filter by integration prefix")
 	return cmd
+}
+
+// shortDesc collapses whitespace, extracts the first sentence, and caps at 80 chars.
+func shortDesc(s string) string {
+	s = strings.TrimSpace(s)
+	s = multiSpaceRe.ReplaceAllString(s, " ")
+
+	// Cut at first sentence boundary
+	for _, sep := range []string{". ", ".\n"} {
+		if idx := strings.Index(s, sep); idx != -1 {
+			s = s[:idx+1]
+			break
+		}
+	}
+
+	if len(s) > 80 {
+		s = s[:77] + "..."
+	}
+	return s
 }
