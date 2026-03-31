@@ -2,7 +2,6 @@ package tools
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/redpine-ai/connect-cli/internal/factory"
 	"github.com/redpine-ai/connect-cli/internal/mcp"
@@ -11,10 +10,15 @@ import (
 )
 
 func NewListCmd(f *factory.Factory) *cobra.Command {
-	return &cobra.Command{
+	var query string
+	var integration string
+
+	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List available upstream MCP tools",
 		Example: `  redpine tools list
+  redpine tools list --query aircraft
+  redpine tools list --integration aviation
   redpine tools list --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, _ := f.Token(f.APIKeyFlag)
@@ -33,41 +37,46 @@ func NewListCmd(f *factory.Factory) *cobra.Command {
 			var allTools []mcp.Tool
 			if err := f.RunWithRefresh(client, sc, func(c *mcp.Client) error {
 				var callErr error
-				allTools, callErr = c.ListTools()
+				allTools, callErr = c.FindTools(query, integration)
 				return callErr
 			}); err != nil {
 				return &output.CLIError{Code: "server_error", Message: err.Error(), ExitCode: output.ExitServer}
 			}
+
+			// Cache for use by info/call commands
 			tc := f.ToolCache()
 			tc.Save(allTools)
-			upstream := filterUpstreamTools(allTools)
+
 			ios := f.IOStreams()
 			if ios.OutputMode(f.JSONFlag != "", f.PrettyFlag) == output.ModePretty {
-				if len(upstream) > 0 {
+				if len(allTools) > 0 {
 					headers := []string{"TOOL", "DESCRIPTION"}
 					var rows [][]string
-					for _, t := range upstream {
-						rows = append(rows, []string{t.Name, t.Description})
+					for _, t := range allTools {
+						desc := t.Description
+						if len(desc) > 80 {
+							desc = desc[:77] + "..."
+						}
+						rows = append(rows, []string{t.Name, desc})
 					}
 					output.RenderTable(ios.Out, headers, rows)
 				} else {
-					fmt.Fprintln(ios.Out, "No upstream tools. Use 'redpine search' and 'redpine collections' for built-in features.")
+					if query != "" {
+						fmt.Fprintf(ios.Out, "No tools matching %q. Try a broader search.\n", query)
+					} else if integration != "" {
+						fmt.Fprintf(ios.Out, "No tools found for integration %q. Run 'redpine tools list' to see all.\n", integration)
+					} else {
+						fmt.Fprintln(ios.Out, "No tools available. Use 'redpine search' and 'redpine collections' for built-in features.")
+					}
 				}
 			} else {
-				ios.WriteJSON(output.NewSuccessEnvelope(upstream))
+				ios.WriteJSON(output.NewSuccessEnvelope(allTools))
 			}
 			return nil
 		},
 	}
-}
 
-func filterUpstreamTools(tools []mcp.Tool) []mcp.Tool {
-	var upstream []mcp.Tool
-	for _, t := range tools {
-		if strings.Contains(t.Name, "--") {
-			upstream = append(upstream, t)
-		}
-	}
-	return upstream
+	cmd.Flags().StringVarP(&query, "query", "q", "", "Search tools by keyword")
+	cmd.Flags().StringVarP(&integration, "integration", "i", "", "Filter by integration prefix")
+	return cmd
 }
-
