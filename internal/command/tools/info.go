@@ -33,48 +33,38 @@ func NewInfoCmd(f *factory.Factory) *cobra.Command {
 
 			toolName := args[0]
 
-			tc := f.ToolCache()
-			allTools, cacheErr := tc.Load()
-			if cacheErr != nil {
-				client, sc, err := f.MCPClientWithSession(token)
-				if err != nil {
-					return &output.CLIError{Code: "server_error", Message: err.Error(), ExitCode: output.ExitServer}
-				}
-				defer sc.Save(client.SessionID())
-				if err := f.RunWithRefresh(client, sc, func(c *mcp.Client) error {
-					var callErr error
-					allTools, callErr = c.ListTools()
-					return callErr
-				}); err != nil {
-					return &output.CLIError{Code: "server_error", Message: err.Error(), ExitCode: output.ExitServer}
-				}
-				tc.Save(allTools)
+			client, sc, err := f.MCPClientWithSession(token)
+			if err != nil {
+				return &output.CLIError{Code: "server_error", Message: err.Error(), ExitCode: output.ExitServer}
 			}
+			defer sc.Save(client.SessionID())
 
 			var tool *mcp.Tool
-			for i := range allTools {
-				if allTools[i].Name == toolName {
-					tool = &allTools[i]
-					break
+			if err := f.RunWithRefresh(client, sc, func(c *mcp.Client) error {
+				var callErr error
+				tool, callErr = c.InspectTool(toolName)
+				return callErr
+			}); err != nil {
+				// If inspect-tool fails (tool not found), provide fuzzy suggestions
+				tc := f.ToolCache()
+				allTools, cacheErr := tc.Load()
+				if cacheErr == nil {
+					names := make([]string, 0, len(allTools))
+					for _, t := range allTools {
+						names = append(names, t.Name)
+					}
+					suggestions := fuzzy.ClosestMatches(toolName, names, 3)
+					return &output.CLIError{
+						Code: "tool_not_found", Message: fmt.Sprintf("Tool '%s' not found", toolName),
+						Suggestions: suggestions, Hint: "Run 'redpine tools list' to see available tools",
+						ExitCode: output.ExitInput,
+					}
 				}
-			}
-
-			if tool == nil {
-				names := make([]string, 0, len(allTools))
-				for _, t := range allTools {
-					names = append(names, t.Name)
-				}
-				suggestions := fuzzy.ClosestMatches(toolName, names, 3)
-				return &output.CLIError{
-					Code: "tool_not_found", Message: fmt.Sprintf("Tool '%s' not found", toolName),
-					Suggestions: suggestions, Hint: "Run 'redpine tools list' to see available tools",
-					ExitCode: output.ExitInput,
-				}
+				return &output.CLIError{Code: "tool_not_found", Message: err.Error(), ExitCode: output.ExitInput}
 			}
 
 			ios := f.IOStreams()
 			if ios.OutputMode(f.JSONFlag != "", f.PrettyFlag) == output.ModeJSON {
-				// JSON mode: same as schema — full raw schema
 				schema := map[string]interface{}{
 					"name":        tool.Name,
 					"description": tool.Description,
