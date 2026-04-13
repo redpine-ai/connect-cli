@@ -130,9 +130,21 @@ func (f *Factory) MCPClientWithSession(token string) (*mcp.Client, *mcp.SessionC
 	return client, sc, nil
 }
 
-// RunWithRefresh executes fn. If it returns a 401 error, refreshes the OAuth
-// token, rebuilds the client, and retries once. This handles expired tokens
-// transparently for any MCP operation.
+// isSessionExpired returns true if the error indicates a stale MCP session ID.
+func isSessionExpired(err error) bool {
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "invalid or expired session")
+}
+
+// isTokenExpired returns true if the error indicates an expired OAuth token.
+func isTokenExpired(err error) bool {
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "401") || strings.Contains(msg, "unauthorized")
+}
+
+// RunWithRefresh executes fn. If it returns a session-expired error, it
+// re-initializes the session and retries. If it returns a 401 error, it
+// refreshes the OAuth token, rebuilds the client, and retries once.
 func (f *Factory) RunWithRefresh(
 	client *mcp.Client,
 	sc *mcp.SessionCache,
@@ -142,8 +154,18 @@ func (f *Factory) RunWithRefresh(
 	if err == nil {
 		return nil
 	}
-	errMsg := strings.ToLower(err.Error())
-	if !strings.Contains(errMsg, "401") && !strings.Contains(errMsg, "unauthorized") {
+
+	// Stale session — re-initialize with same token
+	if isSessionExpired(err) {
+		sc.Delete()
+		if initErr := client.Initialize(); initErr != nil {
+			return initErr
+		}
+		sc.Save(client.SessionID())
+		return fn(client)
+	}
+
+	if !isTokenExpired(err) {
 		return err
 	}
 

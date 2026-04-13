@@ -213,9 +213,12 @@ func NewLoginCmd(f *factory.Factory) *cobra.Command {
 			}
 
 			fmt.Fprintln(ios.ErrOut, "Authentication successful!")
-			return ios.WriteJSON(output.NewSuccessEnvelope(map[string]string{
-				"message": "Authenticated successfully",
-			}))
+			if f.JSONFlag != "" {
+				return ios.WriteJSON(output.NewSuccessEnvelope(map[string]string{
+					"message": "Authenticated successfully",
+				}))
+			}
+			return nil
 		},
 	}
 }
