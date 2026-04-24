@@ -46,7 +46,12 @@ func NewSetKeyCmd(f *factory.Factory, configDir string) *cobra.Command {
 				}
 				creds := &config.Credentials{Token: key, Type: "api_key"}
 				if err := creds.SaveTo(dir); err != nil {
-					return fmt.Errorf("failed to store API key: %w", err)
+					return &output.CLIError{
+						Code:     "store_error",
+						Message:  fmt.Sprintf("Failed to store API key: %s", err),
+						Hint:     "Check permissions on " + dir,
+						ExitCode: output.ExitError,
+					}
 				}
 			}
 

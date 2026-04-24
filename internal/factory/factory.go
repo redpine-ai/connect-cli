@@ -25,7 +25,6 @@ type Factory struct {
 	ServerFlag string
 	JSONFlag   string
 	PrettyFlag bool
-	QuietFlag  bool
 }
 
 func New() *Factory {

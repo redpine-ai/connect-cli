@@ -16,6 +16,7 @@ func NewLogoutCmd(f *factory.Factory) *cobra.Command {
 		Use:   "logout",
 		Short: "Remove stored credentials and terminate session",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ios := f.IOStreams()
 			token, _ := f.Token(f.APIKeyFlag)
 			if token != "" {
 				client := f.MCPClient(token)
@@ -27,7 +28,9 @@ func NewLogoutCmd(f *factory.Factory) *cobra.Command {
 				sc := mcp.DefaultSessionCache(serverURL)
 				if sid := sc.Load(); sid != "" {
 					client.SetSessionID(sid)
-					client.DeleteSession()
+					if err := client.DeleteSession(); err != nil {
+						fmt.Fprintf(ios.ErrOut, "Warning: could not terminate server session: %s\n", err)
+					}
 					sc.Delete()
 				}
 			}
@@ -38,7 +41,7 @@ func NewLogoutCmd(f *factory.Factory) *cobra.Command {
 			credsPath := filepath.Join(config.ConfigDir(), "credentials.json")
 			os.Remove(credsPath)
 
-			fmt.Fprintln(f.IOStreams().ErrOut, "Logged out successfully")
+			fmt.Fprintln(ios.ErrOut, "Logged out successfully")
 			return nil
 		},
 	}

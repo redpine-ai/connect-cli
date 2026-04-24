@@ -26,8 +26,7 @@ var (
 	flagServer string
 	flagJSON   string
 	flagPretty bool
-	flagQuiet  bool
-	flagEnv    string
+	flagEnv string
 )
 
 func NewRootCmd() *cobra.Command {
@@ -64,7 +63,6 @@ Use --json on any command for structured JSON output.`,
 	pf.StringVar(&flagServer, "server", "", "Server URL (env: CONNECT_SERVER_URL)")
 	pf.StringVar(&flagJSON, "json", "", "Force JSON output; optionally select comma-separated fields")
 	pf.BoolVar(&flagPretty, "pretty", false, "Force human-readable output")
-	pf.BoolVarP(&flagQuiet, "quiet", "q", false, "Suppress all output except errors")
 
 	root.PersistentFlags().Lookup("json").NoOptDefVal = "*"
 
@@ -121,7 +119,6 @@ Use --json on any command for structured JSON output.`,
 		f.ServerFlag = flagServer
 		f.JSONFlag = flagJSON
 		f.PrettyFlag = flagPretty
-		f.QuietFlag = flagQuiet
 
 		// Version check — skip for update, help, completion, and shell completion hooks
 		name := cmd.Name()
