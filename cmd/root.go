@@ -121,9 +121,7 @@ Use --json on any command for structured JSON output.`,
 		f.PrettyFlag = flagPretty
 
 		// Version check — skip for update, help, completion, and shell completion hooks
-		name := cmd.Name()
-		if name == "update" || name == "help" || name == "completion" ||
-			strings.HasPrefix(name, "__") {
+		if shouldSkipUpdateCheck(cmd) {
 			return nil
 		}
 
@@ -149,6 +147,20 @@ Use --json on any command for structured JSON output.`,
 	root.AddCommand(whoami.NewWhoamiCmd(f))
 
 	return root
+}
+
+// shouldSkipUpdateCheck returns true for commands where the update gate
+// should not block execution (update, help, completion subcommands, and
+// Cobra's internal shell completion hooks like __complete).
+func shouldSkipUpdateCheck(cmd *cobra.Command) bool {
+	for c := cmd; c != nil; c = c.Parent() {
+		name := c.Name()
+		if name == "update" || name == "help" || name == "completion" ||
+			strings.HasPrefix(name, "__") {
+			return true
+		}
+	}
+	return false
 }
 
 func Execute() {
