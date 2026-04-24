@@ -3,6 +3,7 @@ package mcp
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/redpine-ai/connect-cli/internal/version"
 )
@@ -144,7 +145,7 @@ func (c *Client) FindTools(query, integration string) ([]Tool, error) {
 	for _, block := range result.Content {
 		if block.Type == "text" && block.Text != "" {
 			var tools []Tool
-			if err := json.Unmarshal([]byte(block.Text), &tools); err != nil {
+			if err := json.NewDecoder(strings.NewReader(block.Text)).Decode(&tools); err != nil {
 				return nil, fmt.Errorf("find-tools returned invalid JSON: %w", err)
 			}
 			return tools, nil
@@ -167,7 +168,7 @@ func (c *Client) InspectTool(toolName string) (*Tool, error) {
 	for _, block := range result.Content {
 		if block.Type == "text" && block.Text != "" {
 			var tool Tool
-			if err := json.Unmarshal([]byte(block.Text), &tool); err != nil {
+			if err := json.NewDecoder(strings.NewReader(block.Text)).Decode(&tool); err != nil {
 				return nil, fmt.Errorf("inspect-tool returned invalid JSON: %w", err)
 			}
 			return &tool, nil
