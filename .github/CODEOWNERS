@@ -1,0 +1,4 @@
+# Default owner for everything in this repo (required reviewer once branch
+# protection is enabled). TODO: broaden to a GitHub team once one exists,
+# e.g. @redpine-ai/engineering, and add per-path owners.
+* @fahad-ali7
