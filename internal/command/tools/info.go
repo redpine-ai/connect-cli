@@ -301,7 +301,7 @@ func parseProperty(name string, raw json.RawMessage, required bool) paramInfo {
 		Required    []string                   `json:"required"`
 		Items       json.RawMessage            `json:"items"`
 	}
-	json.Unmarshal(raw, &prop)
+	_ = json.Unmarshal(raw, &prop)
 
 	typeStr := "any"
 	switch v := prop.Type.(type) {

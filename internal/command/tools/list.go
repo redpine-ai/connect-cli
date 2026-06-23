@@ -49,7 +49,7 @@ func NewListCmd(f *factory.Factory) *cobra.Command {
 
 			// Cache for use by info/call commands
 			tc := f.ToolCache()
-			tc.Save(allTools)
+			_ = tc.Save(allTools)
 
 			ios := f.IOStreams()
 			if ios.OutputMode(f.JSONFlag != "", f.PrettyFlag) == output.ModePretty {
@@ -71,7 +71,7 @@ func NewListCmd(f *factory.Factory) *cobra.Command {
 					}
 				}
 			} else {
-				ios.WriteJSON(output.NewSuccessEnvelope(allTools))
+				_ = ios.WriteJSON(output.NewSuccessEnvelope(allTools))
 			}
 			return nil
 		},

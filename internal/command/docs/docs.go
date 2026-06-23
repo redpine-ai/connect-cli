@@ -35,15 +35,16 @@ func NewDocsCmd(f *factory.Factory) *cobra.Command {
 
 func openBrowser(url string) {
 	var cmd *exec.Cmd
+	// #nosec G204 -- fixed command names; url is passed as a separate argv entry (no shell).
 	switch runtime.GOOS {
 	case "darwin":
-		cmd = exec.Command("open", url)
+		cmd = exec.Command("open", url) // #nosec G204
 	case "linux":
-		cmd = exec.Command("xdg-open", url)
+		cmd = exec.Command("xdg-open", url) // #nosec G204
 	case "windows":
-		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url) // #nosec G204
 	}
 	if cmd != nil {
-		cmd.Start()
+		_ = cmd.Start()
 	}
 }

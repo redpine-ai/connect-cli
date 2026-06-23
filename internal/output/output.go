@@ -138,7 +138,7 @@ func (ios *IOStreams) WriteMCPResult(result interface{}, jsonFlag, prettyFlag bo
 		}
 		// Not a tool result shape — fall back to indented JSON
 		var indented bytes.Buffer
-		json.Indent(&indented, data, "", "  ")
+		_ = json.Indent(&indented, data, "", "  ")
 		fmt.Fprintln(ios.Out, indented.String())
 		return nil
 	}

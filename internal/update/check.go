@@ -59,6 +59,7 @@ func Check(cacheDir string) *CheckResult {
 
 func loadCachedVersion(cacheDir string) string {
 	path := filepath.Join(cacheDir, cacheFile)
+	// #nosec G304 -- path is the CLI's own version-cache file under its cache dir, not user input.
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return ""
@@ -74,9 +75,9 @@ func loadCachedVersion(cacheDir string) string {
 }
 
 func saveCachedVersion(cacheDir, ver string) {
-	os.MkdirAll(cacheDir, 0700)
+	_ = os.MkdirAll(cacheDir, 0700)
 	data, _ := json.Marshal(versionCache{Version: ver, CheckedAt: time.Now()})
-	os.WriteFile(filepath.Join(cacheDir, cacheFile), data, 0600)
+	_ = os.WriteFile(filepath.Join(cacheDir, cacheFile), data, 0600)
 }
 
 func fetchLatestVersion() string {
@@ -116,7 +117,9 @@ func parseSemver(v string) [3]int {
 		if i >= 3 {
 			break
 		}
-		fmt.Sscanf(p, "%d", &result[i])
+		// #nosec G602 -- i is bounded by the i>=3 break above; result is a fixed [3]int.
+		// Sscanf error is ignored on purpose: a non-numeric part stays 0.
+		_, _ = fmt.Sscanf(p, "%d", &result[i])
 	}
 	return result
 }

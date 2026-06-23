@@ -36,10 +36,10 @@ func NewLogoutCmd(f *factory.Factory) *cobra.Command {
 			}
 
 			kr := f.Keyring()
-			kr.Delete()
+			_ = kr.Delete()
 
 			credsPath := filepath.Join(config.ConfigDir(), "credentials.json")
-			os.Remove(credsPath)
+			_ = os.Remove(credsPath)
 
 			fmt.Fprintln(ios.ErrOut, "Logged out successfully")
 			return nil

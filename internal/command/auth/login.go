@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"html"
 	"net"
 	"net/http"
 	"net/url"
@@ -71,7 +72,8 @@ func NewLoginCmd(f *factory.Factory) *cobra.Command {
 				if errParam != "" {
 					errDesc := r.URL.Query().Get("error_description")
 					w.Header().Set("Content-Type", "text/html")
-					fmt.Fprintf(w, "<html><body><h2>Authentication Failed</h2><p>%s: %s</p><p>You can close this tab.</p></body></html>", errParam, errDesc)
+					// Escape the reflected query params to avoid HTML injection (gosec G705).
+					fmt.Fprintf(w, "<html><body><h2>Authentication Failed</h2><p>%s: %s</p><p>You can close this tab.</p></body></html>", html.EscapeString(errParam), html.EscapeString(errDesc))
 					errCh <- fmt.Sprintf("%s: %s", errParam, errDesc)
 					return
 				}
@@ -86,12 +88,12 @@ func NewLoginCmd(f *factory.Factory) *cobra.Command {
 				codeCh <- code
 			})
 
-			srv := &http.Server{Handler: mux}
+			srv := &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 			go srv.Serve(listener) //nolint:errcheck
 			defer func() {
 				ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 				defer cancel()
-				srv.Shutdown(ctx) //nolint:errcheck
+				_ = srv.Shutdown(ctx) //nolint:errcheck
 			}()
 
 			// 2. Register client
@@ -103,6 +105,7 @@ func NewLoginCmd(f *factory.Factory) *cobra.Command {
 				"response_types": []string{"code"},
 			})
 
+			// #nosec G704 -- serverURL is the user's own configured Connect API endpoint, not untrusted input.
 			regResp, err := http.Post(serverURL+"/register", "application/json", strings.NewReader(string(regBody)))
 			if err != nil {
 				return &output.CLIError{Code: "register_error", Message: fmt.Sprintf("Failed to register client: %s", err), ExitCode: output.ExitServer}
@@ -175,6 +178,7 @@ func NewLoginCmd(f *factory.Factory) *cobra.Command {
 				"code_verifier": {codeVerifier},
 			}
 
+			// #nosec G704 -- serverURL is the user's own configured Connect API endpoint, not untrusted input.
 			tokenResp, err := http.PostForm(serverURL+"/token", tokenData)
 			if err != nil {
 				return &output.CLIError{Code: "token_error", Message: fmt.Sprintf("Token exchange failed: %s", err), ExitCode: output.ExitServer}
@@ -197,7 +201,7 @@ func NewLoginCmd(f *factory.Factory) *cobra.Command {
 
 			// 7. Store token + refresh token
 			kr := f.Keyring()
-			kr.Set(tokenResult.AccessToken) // best-effort keyring
+			_ = kr.Set(tokenResult.AccessToken) // best-effort keyring
 
 			// Always save to file — refresh token needed for auto-refresh
 			creds := &config.Credentials{
@@ -225,15 +229,17 @@ func NewLoginCmd(f *factory.Factory) *cobra.Command {
 
 func openBrowser(url string) {
 	var cmd *exec.Cmd
+	// #nosec G204 G702 -- fixed command names; url is passed as a separate argv entry
+	// (no shell), so there is no command-injection surface.
 	switch runtime.GOOS {
 	case "darwin":
-		cmd = exec.Command("open", url)
+		cmd = exec.Command("open", url) // #nosec G204 G702
 	case "linux":
-		cmd = exec.Command("xdg-open", url)
+		cmd = exec.Command("xdg-open", url) // #nosec G204 G702
 	case "windows":
-		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url) // #nosec G204 G702
 	}
 	if cmd != nil {
-		cmd.Start() //nolint:errcheck
+		_ = cmd.Start() //nolint:errcheck
 	}
 }

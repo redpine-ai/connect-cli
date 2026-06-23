@@ -48,6 +48,7 @@ func Load() (*Config, error) {
 
 func LoadFrom(dir string) (*Config, error) {
 	path := filepath.Join(dir, configFileName)
+	// #nosec G304 -- path is the CLI's own config file under its config dir, not user input.
 	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
 		return &Config{ServerURL: DefaultServerURL}, nil
@@ -89,17 +90,17 @@ func atomicWrite(path string, data []byte, perm os.FileMode) error {
 	tmpName := tmp.Name()
 
 	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
-		os.Remove(tmpName)
+		_ = tmp.Close()
+		_ = os.Remove(tmpName)
 		return err
 	}
 	if err := tmp.Chmod(perm); err != nil {
-		tmp.Close()
-		os.Remove(tmpName)
+		_ = tmp.Close()
+		_ = os.Remove(tmpName)
 		return err
 	}
 	if err := tmp.Close(); err != nil {
-		os.Remove(tmpName)
+		_ = os.Remove(tmpName)
 		return err
 	}
 	return os.Rename(tmpName, path)
