@@ -92,22 +92,22 @@ Use --json on any command for structured JSON output.`,
 			if cfg.Environment != flagEnv {
 				cfg.Environment = flagEnv
 				cfg.ServerURL = config.EnvURLs[flagEnv]
-				cfg.Save()
+				_ = cfg.Save()
 
 				// Clear auth — tokens are env-specific
 				kr := f.Keyring()
-				kr.Delete()
-				os.Remove(filepath.Join(config.ConfigDir(), "credentials.json"))
+				_ = kr.Delete()
+				_ = os.Remove(filepath.Join(config.ConfigDir(), "credentials.json"))
 
 				// Clear session cache
 				sc := filepath.Join(os.TempDir(), "redpine-session-*")
 				matches, _ := filepath.Glob(sc)
 				for _, m := range matches {
-					os.Remove(m)
+					_ = os.Remove(m)
 				}
 
 				// Clear tool cache
-				os.RemoveAll(filepath.Join(config.ConfigDir(), "cache"))
+				_ = os.RemoveAll(filepath.Join(config.ConfigDir(), "cache"))
 
 				fmt.Fprintf(os.Stderr, "Switched to %s (%s)\n", flagEnv, config.EnvURLs[flagEnv])
 				fmt.Fprintln(os.Stderr, "Auth cleared — run 'redpine auth login' to authenticate.")
@@ -170,7 +170,7 @@ func Execute() {
 		jsonRequested := flagJSON != ""
 		if cliErr, ok := err.(*output.CLIError); ok {
 			if jsonRequested {
-				ios.WriteJSON(output.NewErrorEnvelope(cliErr))
+				_ = ios.WriteJSON(output.NewErrorEnvelope(cliErr))
 			} else {
 				cliErr.WritePretty(ios.ErrOut)
 			}

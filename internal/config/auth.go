@@ -32,6 +32,8 @@ func (c *Credentials) SaveTo(dir string) error {
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return err
 	}
+	// #nosec G117 -- persisting the refresh token to the local credentials file (0600) is
+	// the intended behaviour; it is how the CLI re-authenticates without a fresh login.
 	data, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
 		return err
@@ -41,6 +43,7 @@ func (c *Credentials) SaveTo(dir string) error {
 
 func LoadCredentialsFrom(dir string) (*Credentials, error) {
 	path := filepath.Join(dir, credsFileName)
+	// #nosec G304 -- path is the CLI's own credentials file under its config dir, not user input.
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -95,10 +98,10 @@ func RefreshOAuthToken(kr Keyring) (string, error) {
 
 	// Save to keyring
 	if kr != nil {
-		kr.Set(creds.Token)
+		_ = kr.Set(creds.Token)
 	}
 	// Always update file (has refresh token)
-	creds.SaveTo(dir)
+	_ = creds.SaveTo(dir)
 
 	return result.AccessToken, nil
 }

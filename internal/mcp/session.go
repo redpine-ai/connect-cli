@@ -32,9 +32,9 @@ func (sc *SessionCache) Load() string {
 }
 
 func (sc *SessionCache) Save(sessionID string) {
-	os.WriteFile(sc.path, []byte(sessionID), 0600)
+	_ = os.WriteFile(sc.path, []byte(sessionID), 0600) // best-effort session cache
 }
 
 func (sc *SessionCache) Delete() {
-	os.Remove(sc.path)
+	_ = os.Remove(sc.path) // best-effort cleanup
 }

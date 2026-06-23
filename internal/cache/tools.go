@@ -40,6 +40,7 @@ func NewToolCacheWithTTL(dir string, ttl time.Duration) *ToolCache {
 
 func (tc *ToolCache) Load() ([]mcp.Tool, error) {
 	path := filepath.Join(tc.dir, cacheFileName)
+	// #nosec G304 -- path is the CLI's own tool-cache file under its cache dir, not user input.
 	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
 		return nil, ErrCacheMiss
@@ -82,15 +83,15 @@ func (tc *ToolCache) Save(tools []mcp.Tool) error {
 	}
 	tmpName := tmp.Name()
 	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
-		os.Remove(tmpName)
+		_ = tmp.Close()
+		_ = os.Remove(tmpName)
 		return err
 	}
 	if err := tmp.Chmod(0600); err != nil {
-		tmp.Close()
-		os.Remove(tmpName)
+		_ = tmp.Close()
+		_ = os.Remove(tmpName)
 		return err
 	}
-	tmp.Close()
+	_ = tmp.Close()
 	return os.Rename(tmpName, path)
 }

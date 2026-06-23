@@ -80,6 +80,7 @@ func NewUpdateCmd(f *factory.Factory) *cobra.Command {
 
 			// Download
 			fmt.Fprintf(ios.ErrOut, "Downloading v%s...\n", latest)
+			// #nosec G107 -- downloadURL is built from the trusted GitHub releases API response, not user input.
 			resp, err := http.Get(downloadURL)
 			if err != nil {
 				return &output.CLIError{Code: "download_error", Message: err.Error(), ExitCode: output.ExitServer}
@@ -132,19 +133,19 @@ func NewUpdateCmd(f *factory.Factory) *cobra.Command {
 			tmpName := tmp.Name()
 
 			if _, err := tmp.Write(binaryData); err != nil {
-				tmp.Close()
-				os.Remove(tmpName)
+				_ = tmp.Close()
+				_ = os.Remove(tmpName)
 				return &output.CLIError{Code: "update_error", Message: err.Error(), ExitCode: output.ExitError}
 			}
 			if err := tmp.Chmod(0755); err != nil {
-				tmp.Close()
-				os.Remove(tmpName)
+				_ = tmp.Close()
+				_ = os.Remove(tmpName)
 				return &output.CLIError{Code: "update_error", Message: err.Error(), ExitCode: output.ExitError}
 			}
-			tmp.Close()
+			_ = tmp.Close()
 
 			if err := os.Rename(tmpName, execPath); err != nil {
-				os.Remove(tmpName)
+				_ = os.Remove(tmpName)
 				return &output.CLIError{
 					Code: "update_error", Message: fmt.Sprintf("Cannot replace binary (try with sudo?): %s", err),
 					ExitCode: output.ExitError,
