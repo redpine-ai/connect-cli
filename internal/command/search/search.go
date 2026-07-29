@@ -12,12 +12,31 @@ import (
 
 func NewSearchCmd(f *factory.Factory) *cobra.Command {
 	var limit int
+	var filters []string
+	var filterJSON string
 
 	cmd := &cobra.Command{
 		Use:   "search <collection> <query>",
 		Short: "Search documents in a collection",
 		Example: `  redpine search redpine-test "how does authentication work"
-  redpine search api-docs "rate limiting" --limit 5`,
+  redpine search api-docs "rate limiting" --limit 5
+
+  # filter by journal identity (ISSN survives title spelling variants)
+  redpine search corpus "crispr" --filter issn=1664-302X
+  redpine search corpus "crispr" --filter issn=1664-302X,1932-6203
+
+  # exclude
+  redpine search corpus "crispr" --filter 'issn!=1932-6203'
+  redpine search corpus "crispr" --filter 'publisher!=Elsevier'
+
+  # DOI (case-insensitive; a doi.org prefix is accepted)
+  redpine search corpus "crispr" --filter doi=10.1345/aph.1g425
+
+  # journal metric threshold (OpenAlex 2-year mean citedness, CC0)
+  redpine search corpus "crispr" --filter 'journal_metric.2yr_mean_citedness>=5'
+
+  # full DSL for OR / nesting
+  redpine search corpus "crispr" --filter-json '{"or":[{"field":"issn","eq":"1664-302X"},{"field":"issn","eq":"1932-6203"}]}'`,
 		Args: cobra.MinimumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, _ := f.Token(f.APIKeyFlag)
@@ -43,6 +62,32 @@ func NewSearchCmd(f *factory.Factory) *cobra.Command {
 			if limit > 0 {
 				searchArgs["limit"] = limit
 			}
+
+			// --filter and --filter-json are mutually exclusive: the compact
+			// form builds a flat object and the JSON form may be a structured
+			// DSL node, and the two shapes cannot be merged coherently.
+			if len(filters) > 0 && strings.TrimSpace(filterJSON) != "" {
+				return &output.CLIError{
+					Code: "invalid_input", Message: "Use either --filter or --filter-json, not both",
+					Hint: "--filter builds a flat filter; --filter-json takes the full DSL", ExitCode: output.ExitInput,
+				}
+			}
+			parsedFilters, err := ParseFilters(filters)
+			if err != nil {
+				return &output.CLIError{
+					Code: "invalid_input", Message: err.Error(), ExitCode: output.ExitInput,
+				}
+			}
+			if parsedFilters == nil {
+				if parsedFilters, err = ParseFilterJSON(filterJSON); err != nil {
+					return &output.CLIError{
+						Code: "invalid_input", Message: err.Error(), ExitCode: output.ExitInput,
+					}
+				}
+			}
+			if parsedFilters != nil {
+				searchArgs["filters"] = parsedFilters
+			}
 			var result *mcp.ToolCallResult
 			if err := f.RunWithRefresh(client, sc, func(c *mcp.Client) error {
 				var callErr error
@@ -65,6 +110,14 @@ func NewSearchCmd(f *factory.Factory) *cobra.Command {
 	}
 
 	cmd.Flags().IntVar(&limit, "limit", 0, "Maximum number of results")
+	cmd.Flags().StringArrayVar(&filters, "filter", nil,
+		"Metadata filter, repeatable. key=value (comma-separates into any-of), "+
+			"key!=value to exclude, or key>=N / key<=N for ranges. Indexed fields: "+
+			"journal, publisher, keywords, publication_date, doi, issn, doc_id, "+
+			"curated_sets, plus journal_metric.2yr_mean_citedness (range only)")
+	cmd.Flags().StringVar(&filterJSON, "filter-json", "",
+		"Raw filter object for OR / nested logic, e.g. "+
+			`'{"or":[{"field":"issn","eq":"1664-302X"}]}'`)
 	return cmd
 }
 
