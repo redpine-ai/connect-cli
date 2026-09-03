@@ -46,7 +46,7 @@ brews:
     name: connect-cli
     homepage: "https://github.com/redpine-ai/connect-cli"
     description: "CLI for the Connect platform — MCP client for AI agents"
-    license: "MIT"
+    license: "Apache-2.0"
     install: |
       bin.install "redpine"
 
