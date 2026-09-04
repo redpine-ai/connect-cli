@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Go 1.26.x (see the `go` directive in `go.mod` for the minimum patch version)
+- Go 1.27.x (see the `go` directive in `go.mod` for the minimum patch version)
 - `goreleaser` (only needed if you want to test a release build locally; CI handles real releases)
 
 ## Build
@@ -26,7 +26,7 @@ go test ./... -race
 go vet ./...
 ```
 
-CI (`ci.yml`) runs these on a 2-OS matrix (`ubuntu-latest`, `macos-latest`) against Go `1.26`.
+CI (`ci.yml`) runs these on a 2-OS matrix (`ubuntu-latest`, `macos-latest`) against Go `1.27`.
 
 ## Lint
 

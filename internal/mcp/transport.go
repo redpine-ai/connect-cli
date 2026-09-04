@@ -7,6 +7,9 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
+
+	"github.com/redpine-ai/connect-cli/internal/version"
 )
 
 type RPCRequest struct {
@@ -59,13 +62,17 @@ type Transport struct {
 	client    *http.Client
 }
 
+// RequestTimeout bounds every MCP round-trip. Assisted-style tools can run
+// for a while, so this is generous; without it a hung server hangs the CLI.
+const RequestTimeout = 120 * time.Second
+
 func NewTransport(url, token string) *Transport {
 	url = strings.TrimSuffix(url, "/")
 	url = strings.TrimSuffix(url, "/mcp")
 	return &Transport{
 		url:    url,
 		token:  token,
-		client: &http.Client{},
+		client: &http.Client{Timeout: RequestTimeout},
 	}
 }
 
@@ -180,7 +187,11 @@ func (t *Transport) doPost(body []byte) ([]byte, error) {
 
 func (t *Transport) setHeaders(req *http.Request) {
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
+	// Streamable HTTP clients must accept both; the server answers with JSON
+	// today but a spec-compliant upgrade may 406 a JSON-only Accept.
+	req.Header.Set("Accept", "application/json, text/event-stream")
+	req.Header.Set("MCP-Protocol-Version", ProtocolVersion)
+	req.Header.Set("User-Agent", "redpine-cli/"+version.Version)
 	if t.token != "" {
 		req.Header.Set("Authorization", "Bearer "+t.token)
 	}

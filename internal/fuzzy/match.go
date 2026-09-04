@@ -32,7 +32,7 @@ func ClosestMatches(input string, candidates []string, limit int) []string {
 			return []string{c}
 		}
 		d := levenshtein.ComputeDistance(input, c)
-		if d < maxDistance {
+		if d < maxDistance { // strictly less: three edits apart is not a suggestion
 			results = append(results, scored{c, d})
 		}
 	}

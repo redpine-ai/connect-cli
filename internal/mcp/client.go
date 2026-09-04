@@ -14,14 +14,22 @@ type Tool struct {
 	InputSchema json.RawMessage `json:"inputSchema"`
 }
 
+// ToolCallResult is a tools/call result. IsError is the MCP tool-level
+// failure flag: the JSON-RPC call succeeded but the tool reports an error in
+// its content (expired queryId, insufficient balance, bad arguments).
 type ToolCallResult struct {
 	Content []ContentBlock `json:"content"`
+	IsError bool           `json:"isError,omitempty"`
 }
 
 type ContentBlock struct {
 	Type string `json:"type"`
 	Text string `json:"text,omitempty"`
 }
+
+// ProtocolVersion is the MCP revision this client speaks. It is sent in the
+// initialize handshake and as the MCP-Protocol-Version header on every call.
+const ProtocolVersion = "2025-03-26"
 
 type Client struct {
 	transport *Transport
@@ -53,7 +61,7 @@ func (c *Client) Initialize() error {
 		ID:      c.nextID(),
 		Method:  "initialize",
 		Params: map[string]interface{}{
-			"protocolVersion": "2025-03-26",
+			"protocolVersion": ProtocolVersion,
 			"clientInfo": map[string]string{
 				"name":    "connect-cli",
 				"version": version.Version,

@@ -1,7 +1,6 @@
 package factory
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -13,9 +12,9 @@ import (
 
 type Factory struct {
 	IOStreams func() *output.IOStreams
-	Config   func() (*config.Config, error)
-	Keyring  func() config.Keyring
-	Token    func(flagValue string) (token, source string)
+	Config    func() (*config.Config, error)
+	Keyring   func() config.Keyring
+	Token     func(flagValue string) (token, source string)
 
 	MCPClient func(token string) *mcp.Client
 	ToolCache func() *cache.ToolCache
@@ -23,7 +22,7 @@ type Factory struct {
 	// Global flag values — set by root command
 	APIKeyFlag string
 	ServerFlag string
-	JSONFlag   string
+	JSONFlag   bool
 	PrettyFlag bool
 }
 
@@ -70,7 +69,7 @@ func New() *Factory {
 		}
 		serverURL := f.ServerFlag
 		if serverURL == "" {
-			serverURL = os.Getenv("CONNECT_SERVER_URL")
+			serverURL = config.ServerURLFromEnv()
 		}
 		if serverURL == "" {
 			serverURL = cfg.ServerURLForEnv()
@@ -94,7 +93,7 @@ func (f *Factory) MCPClientWithSession(token string) (*mcp.Client, *mcp.SessionC
 	}
 	serverURL := f.ServerFlag
 	if serverURL == "" {
-		serverURL = os.Getenv("CONNECT_SERVER_URL")
+		serverURL = config.ServerURLFromEnv()
 	}
 	if serverURL == "" {
 		serverURL = cfg.ServerURLForEnv()
@@ -181,7 +180,7 @@ func (f *Factory) RunWithRefresh(
 	}
 	serverURL := f.ServerFlag
 	if serverURL == "" {
-		serverURL = os.Getenv("CONNECT_SERVER_URL")
+		serverURL = config.ServerURLFromEnv()
 	}
 	if serverURL == "" {
 		serverURL = cfg.ServerURLForEnv()

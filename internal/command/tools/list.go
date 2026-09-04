@@ -29,7 +29,7 @@ func NewListCmd(f *factory.Factory) *cobra.Command {
 			if token == "" {
 				return &output.CLIError{
 					Code: "not_authenticated", Message: "Not authenticated",
-					Hint: "Run 'redpine auth login' or set CONNECT_API_KEY", ExitCode: output.ExitAuth,
+					Hint: "Run 'redpine auth login', or set REDPINE_API_KEY (CONNECT_API_KEY still works)", ExitCode: output.ExitAuth,
 				}
 			}
 			client, sc, err := f.MCPClientWithSession(token)
@@ -52,7 +52,7 @@ func NewListCmd(f *factory.Factory) *cobra.Command {
 			_ = tc.Save(allTools)
 
 			ios := f.IOStreams()
-			if ios.OutputMode(f.JSONFlag != "", f.PrettyFlag) == output.ModePretty {
+			if ios.OutputMode(f.JSONFlag, f.PrettyFlag) == output.ModePretty {
 				if len(allTools) > 0 {
 					headers := []string{"TOOL", "DESCRIPTION"}
 					var rows [][]string

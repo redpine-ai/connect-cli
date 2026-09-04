@@ -47,8 +47,8 @@ func (k *SystemKeyring) Delete() error {
 type noopKeyring struct{}
 
 func (k *noopKeyring) Get() (string, error) { return "", ErrKeyringUnavailable }
-func (k *noopKeyring) Set(string) error      { return ErrKeyringUnavailable }
-func (k *noopKeyring) Delete() error         { return ErrKeyringUnavailable }
+func (k *noopKeyring) Set(string) error     { return ErrKeyringUnavailable }
+func (k *noopKeyring) Delete() error        { return ErrKeyringUnavailable }
 
 func withTimeout(fn func() (string, error)) (string, error) {
 	type result struct {
