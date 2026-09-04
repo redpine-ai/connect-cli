@@ -12,8 +12,9 @@ const (
 
 	// Environment variables. The REDPINE_* names match the SDKs; the
 	// CONNECT_* names are the original CLI names and stay as fallbacks.
-	EnvAPIKey          = "REDPINE_API_KEY"
-	EnvAPIKeyFallback  = "CONNECT_API_KEY"
+	// #nosec G101 -- these are variable NAMES, not credential values.
+	EnvAPIKey         = "REDPINE_API_KEY" // #nosec G101
+	EnvAPIKeyFallback = "CONNECT_API_KEY" // #nosec G101
 	EnvBaseURL         = "REDPINE_BASE_URL"
 	EnvBaseURLFallback = "CONNECT_SERVER_URL"
 )

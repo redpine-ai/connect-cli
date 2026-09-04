@@ -45,10 +45,10 @@ func Run(f *factory.Factory) error {
 	sandbox := false
 	switch {
 	case strings.HasPrefix(token, SandboxKeyPrefix):
-		tokenType = "API key (sandbox)"
+		tokenType = "API key (sandbox)" // #nosec G101 -- a display label, not a credential
 		sandbox = true
 	case strings.HasPrefix(token, "sk_live_"):
-		tokenType = "API key"
+		tokenType = "API key" // #nosec G101 -- a display label, not a credential
 	}
 
 	hasRefresh := false
