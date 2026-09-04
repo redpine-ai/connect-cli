@@ -41,7 +41,7 @@ func NewCallCmd(f *factory.Factory) *cobra.Command {
 			if token == "" {
 				return &output.CLIError{
 					Code: "not_authenticated", Message: "Not authenticated",
-					Hint: "Run 'redpine auth login' or set CONNECT_API_KEY", ExitCode: output.ExitAuth,
+					Hint: "Run 'redpine auth login', or set REDPINE_API_KEY (CONNECT_API_KEY still works)", ExitCode: output.ExitAuth,
 				}
 			}
 
@@ -99,7 +99,7 @@ func NewCallCmd(f *factory.Factory) *cobra.Command {
 					},
 				}
 				ios := f.IOStreams()
-				return ios.WriteResult(payload, f.JSONFlag != "", f.PrettyFlag, func(w io.Writer) {
+				return ios.WriteResult(payload, f.JSONFlag, f.PrettyFlag, func(w io.Writer) {
 					fmt.Fprintf(w, "Method:    tools/call\n")
 					fmt.Fprintf(w, "Tool:      %s\n", toolName)
 					fmt.Fprintf(w, "Arguments:\n")
@@ -151,7 +151,7 @@ func NewCallCmd(f *factory.Factory) *cobra.Command {
 			}
 
 			ios := f.IOStreams()
-			return ios.WriteMCPResult(result, f.JSONFlag != "", f.PrettyFlag)
+			return ios.WriteMCPResult(result, f.JSONFlag, f.PrettyFlag)
 		},
 	}
 

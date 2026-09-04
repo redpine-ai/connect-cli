@@ -81,12 +81,22 @@ func saveCachedVersion(cacheDir, ver string) {
 }
 
 func fetchLatestVersion() string {
+	req, err := http.NewRequest(http.MethodGet, releasesURL, nil)
+	if err != nil {
+		return ""
+	}
+	// GitHub rate-limits anonymous requests without a User-Agent hard.
+	req.Header.Set("User-Agent", "redpine-cli/"+version.Version)
+	req.Header.Set("Accept", "application/vnd.github+json")
 	client := &http.Client{Timeout: 3 * time.Second}
-	resp, err := client.Get(releasesURL)
-	if err != nil || resp.StatusCode != 200 {
+	resp, err := client.Do(req)
+	if err != nil {
 		return ""
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return ""
+	}
 	var release struct {
 		TagName string `json:"tag_name"`
 	}
@@ -124,7 +134,7 @@ func parseSemver(v string) [3]int {
 	return result
 }
 
-// FormatWarning returns a stderr message for outdated versions.
+// FormatWarning returns the one-line stderr notice for outdated versions.
 func (r *CheckResult) FormatWarning() string {
-	return fmt.Sprintf("Update required: v%s → v%s. Run: redpine update", r.Current, r.Latest)
+	return fmt.Sprintf("A newer redpine is available: v%s → v%s. Run: redpine update", r.Current, r.Latest)
 }

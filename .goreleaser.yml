@@ -21,11 +21,11 @@ builds:
         goarch: arm64
 
 archives:
-  - format: tar.gz
+  - formats: [tar.gz]
     name_template: "connect-cli_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     format_overrides:
       - goos: windows
-        format: zip
+        formats: [zip]
 
 checksum:
   name_template: "checksums.txt"
@@ -45,7 +45,7 @@ brews:
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     name: connect-cli
     homepage: "https://github.com/redpine-ai/connect-cli"
-    description: "CLI for the Connect platform — MCP client for AI agents"
+    description: "Redpine CLI — search Redpine Connect and call MCP tools from the terminal"
     license: "Apache-2.0"
     install: |
       bin.install "redpine"

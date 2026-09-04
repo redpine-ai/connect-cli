@@ -20,9 +20,8 @@ func TestLoadConfig_Default(t *testing.T) {
 func TestSaveAndLoadConfig(t *testing.T) {
 	dir := t.TempDir()
 	cfg := &Config{
-		ServerURL:         "https://custom.example.com",
-		DefaultCollection: "my-docs",
-		Output:            "json",
+		ServerURL:   "https://custom.example.com",
+		Environment: "staging",
 	}
 	if err := cfg.SaveTo(dir); err != nil {
 		t.Fatal(err)
@@ -35,8 +34,8 @@ func TestSaveAndLoadConfig(t *testing.T) {
 	if loaded.ServerURL != "https://custom.example.com" {
 		t.Errorf("got %q", loaded.ServerURL)
 	}
-	if loaded.DefaultCollection != "my-docs" {
-		t.Errorf("got %q", loaded.DefaultCollection)
+	if loaded.Environment != "staging" {
+		t.Errorf("got %q", loaded.Environment)
 	}
 }
 

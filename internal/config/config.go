@@ -9,6 +9,14 @@ import (
 const (
 	DefaultServerURL = "https://api.redpine.ai"
 	configFileName   = "config.json"
+
+	// Environment variables. The REDPINE_* names match the SDKs; the
+	// CONNECT_* names are the original CLI names and stay as fallbacks.
+	// #nosec G101 -- these are variable NAMES, not credential values.
+	EnvAPIKey          = "REDPINE_API_KEY" // #nosec G101
+	EnvAPIKeyFallback  = "CONNECT_API_KEY" // #nosec G101
+	EnvBaseURL         = "REDPINE_BASE_URL"
+	EnvBaseURLFallback = "CONNECT_SERVER_URL"
 )
 
 // Environment URLs — not exposed in help
@@ -17,11 +25,20 @@ var EnvURLs = map[string]string{
 	"staging":    "https://api-staging.redpine.ai",
 }
 
+// ServerURLFromEnv returns the server URL override from the environment, or
+// "" when neither REDPINE_BASE_URL nor CONNECT_SERVER_URL is set.
+func ServerURLFromEnv() string {
+	for _, name := range []string{EnvBaseURL, EnvBaseURLFallback} {
+		if v := os.Getenv(name); v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
 type Config struct {
-	ServerURL         string `json:"server_url"`
-	DefaultCollection string `json:"default_collection,omitempty"`
-	Output            string `json:"output,omitempty"`
-	Environment       string `json:"environment,omitempty"`
+	ServerURL   string `json:"server_url"`
+	Environment string `json:"environment,omitempty"`
 }
 
 // ServerURLForEnv returns the server URL for the current environment.

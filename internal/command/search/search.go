@@ -43,7 +43,7 @@ func NewSearchCmd(f *factory.Factory) *cobra.Command {
 			if token == "" {
 				return &output.CLIError{
 					Code: "not_authenticated", Message: "Not authenticated",
-					Hint: "Run 'redpine auth login' or set CONNECT_API_KEY", ExitCode: output.ExitAuth,
+					Hint: "Run 'redpine auth login', or set REDPINE_API_KEY (CONNECT_API_KEY still works)", ExitCode: output.ExitAuth,
 				}
 			}
 			client, sc, err := f.MCPClientWithSession(token)
@@ -52,41 +52,9 @@ func NewSearchCmd(f *factory.Factory) *cobra.Command {
 			}
 			defer sc.Save(client.SessionID())
 
-			collection := args[0]
-			query := strings.Join(args[1:], " ")
-
-			searchArgs := map[string]interface{}{
-				"collection": collection,
-				"query":      query,
-			}
-			if limit > 0 {
-				searchArgs["limit"] = limit
-			}
-
-			// --filter and --filter-json are mutually exclusive: the compact
-			// form builds a flat object and the JSON form may be a structured
-			// DSL node, and the two shapes cannot be merged coherently.
-			if len(filters) > 0 && strings.TrimSpace(filterJSON) != "" {
-				return &output.CLIError{
-					Code: "invalid_input", Message: "Use either --filter or --filter-json, not both",
-					Hint: "--filter builds a flat filter; --filter-json takes the full DSL", ExitCode: output.ExitInput,
-				}
-			}
-			parsedFilters, err := ParseFilters(filters)
-			if err != nil {
-				return &output.CLIError{
-					Code: "invalid_input", Message: err.Error(), ExitCode: output.ExitInput,
-				}
-			}
-			if parsedFilters == nil {
-				if parsedFilters, err = ParseFilterJSON(filterJSON); err != nil {
-					return &output.CLIError{
-						Code: "invalid_input", Message: err.Error(), ExitCode: output.ExitInput,
-					}
-				}
-			}
-			if parsedFilters != nil {
-				searchArgs["filters"] = parsedFilters
+			searchArgs, argErr := BuildSearchArgs(args[0], strings.Join(args[1:], " "), limit, filters, filterJSON)
+			if argErr != nil {
+				return argErr
 			}
 			var result *mcp.ToolCallResult
 			if err := f.RunWithRefresh(client, sc, func(c *mcp.Client) error {
@@ -97,7 +65,7 @@ func NewSearchCmd(f *factory.Factory) *cobra.Command {
 				return &output.CLIError{Code: "server_error", Message: err.Error(), ExitCode: output.ExitServer}
 			}
 			ios := f.IOStreams()
-			return ios.WriteMCPResult(result, f.JSONFlag != "", f.PrettyFlag)
+			return ios.WriteMCPResult(result, f.JSONFlag, f.PrettyFlag)
 		},
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			if len(args) == 0 {
@@ -113,42 +81,53 @@ func NewSearchCmd(f *factory.Factory) *cobra.Command {
 	cmd.Flags().StringArrayVar(&filters, "filter", nil,
 		"Metadata filter, repeatable. key=value (comma-separates into any-of), "+
 			"key!=value to exclude, or key>=N / key<=N for ranges. Indexed fields: "+
-			"journal, publisher, keywords, publication_date, doi, issn, doc_id, "+
-			"curated_sets, plus journal_metric.2yr_mean_citedness (range only)")
+			"doc_id, journal, publisher, keywords, publication_date, doi, issn, article_type, "+
+			"section, isbn, open_access, license, chapter_number, chapter_title, chapter_authors, "+
+			"plus journal_metric.2yr_mean_citedness / h_index / i10_index (range only). "+
+			"Other fields work but are matched by scanning")
 	cmd.Flags().StringVar(&filterJSON, "filter-json", "",
 		"Raw filter object for OR / nested logic, e.g. "+
 			`'{"or":[{"field":"issn","eq":"1664-302X"}]}'`)
 	return cmd
 }
 
-func completeCollections(f *factory.Factory, prefix string) []string {
-	// Try to get collection names from tool cache (list_collections result)
-	// or from a dedicated collection cache
-	tc := f.ToolCache()
-	tools, err := tc.Load()
-	if err != nil {
-		// Try fetching live
-		token, _ := f.Token(f.APIKeyFlag)
-		if token == "" {
-			return nil
-		}
-		client, sc, clientErr := f.MCPClientWithSession(token)
-		if clientErr != nil {
-			return nil
-		}
-		defer sc.Save(client.SessionID())
-
-		// Fetch collections
-		result, callErr := client.CallTool("list_collections", map[string]interface{}{})
-		if callErr != nil {
-			return nil
-		}
-		return extractCollectionNames(result, prefix)
+// BuildSearchArgs assembles the argument object for the MCP `search` tool from
+// the CLI's flags. Shared with `preview`, which wraps the same arguments.
+func BuildSearchArgs(collection, query string, limit int, filters []string, filterJSON string) (map[string]interface{}, *output.CLIError) {
+	searchArgs := map[string]interface{}{
+		"collection": collection,
+		"query":      query,
+	}
+	if limit > 0 {
+		searchArgs["limit"] = limit
 	}
 
-	// If we have cached tools, try calling list_collections live for names
-	// For now, check if there's a collections cache file
-	_ = tools
+	// --filter and --filter-json are mutually exclusive: the compact form
+	// builds a flat object and the JSON form may be a structured DSL node,
+	// and the two shapes cannot be merged coherently.
+	if len(filters) > 0 && strings.TrimSpace(filterJSON) != "" {
+		return nil, &output.CLIError{
+			Code: "invalid_input", Message: "Use either --filter or --filter-json, not both",
+			Hint: "--filter builds a flat filter; --filter-json takes the full DSL", ExitCode: output.ExitInput,
+		}
+	}
+	parsed, err := ParseFilters(filters)
+	if err != nil {
+		return nil, &output.CLIError{Code: "invalid_input", Message: err.Error(), ExitCode: output.ExitInput}
+	}
+	if parsed == nil {
+		if parsed, err = ParseFilterJSON(filterJSON); err != nil {
+			return nil, &output.CLIError{Code: "invalid_input", Message: err.Error(), ExitCode: output.ExitInput}
+		}
+	}
+	if parsed != nil {
+		searchArgs["filters"] = parsed
+	}
+	return searchArgs, nil
+}
+
+// completeCollections fetches collection names live for shell completion.
+func completeCollections(f *factory.Factory, prefix string) []string {
 	token, _ := f.Token(f.APIKeyFlag)
 	if token == "" {
 		return nil

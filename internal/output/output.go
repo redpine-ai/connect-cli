@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"strings"
 
 	"golang.org/x/term"
 )
@@ -61,13 +62,20 @@ func (ios *IOStreams) IsTTY() bool {
 	return ios.tty
 }
 
-// OutputMode resolves the effective output mode from flags.
-// Pretty (human-readable) is the default. JSON only when --json is explicitly passed.
+// OutputMode resolves the effective output mode: --json forces JSON, --pretty
+// forces human-readable, otherwise a terminal gets pretty output and a pipe
+// or script gets the JSON envelope.
 func (ios *IOStreams) OutputMode(jsonFlag, prettyFlag bool) OutputMode {
-	if jsonFlag {
+	switch {
+	case jsonFlag:
+		return ModeJSON
+	case prettyFlag:
+		return ModePretty
+	case ios.tty:
+		return ModePretty
+	default:
 		return ModeJSON
 	}
-	return ModePretty
 }
 
 // Envelope is the standard JSON response wrapper.
@@ -106,6 +114,9 @@ func (ios *IOStreams) WriteResult(data interface{}, jsonFlag, prettyFlag bool, p
 
 // WriteMCPResult outputs an MCP tool call result. In pretty mode, extracts
 // text content blocks and prints them directly. In JSON mode, wraps in envelope.
+// A result flagged isError by the tool (expired queryId, insufficient balance,
+// bad arguments) becomes a CLI error, so it renders as the error envelope and
+// exits non-zero instead of masquerading as success.
 func (ios *IOStreams) WriteMCPResult(result interface{}, jsonFlag, prettyFlag bool) error {
 	type contentBlock struct {
 		Type string `json:"type"`
@@ -113,16 +124,33 @@ func (ios *IOStreams) WriteMCPResult(result interface{}, jsonFlag, prettyFlag bo
 	}
 	type toolResult struct {
 		Content []contentBlock `json:"content"`
+		IsError bool           `json:"isError"`
+	}
+
+	// Marshal and re-parse to inspect the result generically
+	data, err := json.Marshal(result)
+	if err != nil {
+		return ios.WriteJSON(NewSuccessEnvelope(result))
+	}
+	var tr toolResult
+	parsed := json.Unmarshal(data, &tr) == nil
+
+	if parsed && tr.IsError {
+		var texts []string
+		for _, block := range tr.Content {
+			if block.Type == "text" && block.Text != "" {
+				texts = append(texts, block.Text)
+			}
+		}
+		msg := strings.TrimSpace(strings.Join(texts, "\n"))
+		if msg == "" {
+			msg = "tool returned an error"
+		}
+		return &CLIError{Code: "tool_error", Message: msg, ExitCode: ExitError}
 	}
 
 	if ios.OutputMode(jsonFlag, prettyFlag) == ModePretty {
-		// Marshal and re-parse to extract content blocks generically
-		data, err := json.Marshal(result)
-		if err != nil {
-			return ios.WriteJSON(NewSuccessEnvelope(result))
-		}
-		var tr toolResult
-		if err := json.Unmarshal(data, &tr); err == nil && len(tr.Content) > 0 {
+		if parsed && len(tr.Content) > 0 {
 			for _, block := range tr.Content {
 				if block.Type == "text" && block.Text != "" {
 					text := block.Text
@@ -144,5 +172,3 @@ func (ios *IOStreams) WriteMCPResult(result interface{}, jsonFlag, prettyFlag bo
 	}
 	return ios.WriteJSON(NewSuccessEnvelope(result))
 }
-
-

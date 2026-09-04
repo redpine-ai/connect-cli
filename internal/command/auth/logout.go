@@ -20,8 +20,14 @@ func NewLogoutCmd(f *factory.Factory) *cobra.Command {
 			token, _ := f.Token(f.APIKeyFlag)
 			if token != "" {
 				client := f.MCPClient(token)
+				// Same resolution as the factory (flag, env, config), or the
+				// session-cache key hashes a different URL than the one the
+				// session was created for and the server session leaks.
 				cfg, _ := f.Config()
 				serverURL := f.ServerFlag
+				if serverURL == "" {
+					serverURL = config.ServerURLFromEnv()
+				}
 				if serverURL == "" {
 					serverURL = cfg.ServerURLForEnv()
 				}

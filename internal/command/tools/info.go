@@ -27,7 +27,7 @@ func NewInfoCmd(f *factory.Factory) *cobra.Command {
 			if token == "" {
 				return &output.CLIError{
 					Code: "not_authenticated", Message: "Not authenticated",
-					Hint: "Run 'redpine auth login' or set CONNECT_API_KEY", ExitCode: output.ExitAuth,
+					Hint: "Run 'redpine auth login', or set REDPINE_API_KEY (CONNECT_API_KEY still works)", ExitCode: output.ExitAuth,
 				}
 			}
 
@@ -64,7 +64,7 @@ func NewInfoCmd(f *factory.Factory) *cobra.Command {
 			}
 
 			ios := f.IOStreams()
-			if ios.OutputMode(f.JSONFlag != "", f.PrettyFlag) == output.ModeJSON {
+			if ios.OutputMode(f.JSONFlag, f.PrettyFlag) == output.ModeJSON {
 				schema := map[string]interface{}{
 					"name":        tool.Name,
 					"description": tool.Description,

@@ -115,9 +115,12 @@ func resolveTokenFrom(flagValue string, kr Keyring, configDir string) (token, so
 	if flagValue != "" {
 		return flagValue, "flag"
 	}
-	// 2. Env var
-	if env := os.Getenv("CONNECT_API_KEY"); env != "" {
-		return env, "env"
+	// 2. Env var — REDPINE_API_KEY first, CONNECT_API_KEY as the legacy
+	// fallback, same precedence as the SDKs.
+	for _, name := range []string{EnvAPIKey, EnvAPIKeyFallback} {
+		if env := os.Getenv(name); env != "" {
+			return env, "env"
+		}
 	}
 	// 3. Keyring
 	if kr != nil {

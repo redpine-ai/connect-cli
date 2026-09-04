@@ -7,8 +7,11 @@ import (
 	"strings"
 
 	"github.com/redpine-ai/connect-cli/internal/command/auth"
+	"github.com/redpine-ai/connect-cli/internal/command/balance"
 	"github.com/redpine-ai/connect-cli/internal/command/collections"
+	"github.com/redpine-ai/connect-cli/internal/command/confirm"
 	"github.com/redpine-ai/connect-cli/internal/command/docs"
+	"github.com/redpine-ai/connect-cli/internal/command/preview"
 	"github.com/redpine-ai/connect-cli/internal/command/search"
 	"github.com/redpine-ai/connect-cli/internal/command/tools"
 	updatecmd "github.com/redpine-ai/connect-cli/internal/command/update"
@@ -24,16 +27,22 @@ import (
 var (
 	flagAPIKey string
 	flagServer string
-	flagJSON   string
+	flagJSON   bool
 	flagPretty bool
-	flagEnv string
+	flagEnv    string
 )
 
 func NewRootCmd() *cobra.Command {
 	root := &cobra.Command{
 		Use:   "redpine",
-		Short: "Redpine CLI — MCP client for the Connect platform",
-		Long: `Redpine CLI — search documents, list collections, and call upstream MCP tools.
+		Short: "Redpine CLI — search Redpine Connect and call MCP tools from the terminal",
+		Long: `Redpine CLI — search documents, preview and unlock results, list collections,
+and call upstream MCP tools. Built for agents: JSON when piped, readable in a terminal.
+
+Search:
+  redpine search <collection> "query"       Search and pay per result
+  redpine preview <collection> "query"      Free teasers plus the price to unlock
+  redpine confirm <queryId> [resultId...]   Pay for and receive previewed results
 
 Agent quick start:
   1. redpine tools list --json          Get all tools with full input schemas
@@ -44,11 +53,11 @@ Pipe chaining (auto-wires IDs between commands):
   redpine tools call media--create_workspace --input '{"filter":{"query":"X"}}' \
     | redpine tools call media--daily_briefing
 
-Use --json on any command for structured JSON output.`,
-		SilenceUsage:              true,
-		SilenceErrors:             true,
+Output is JSON when stdout is not a terminal; --json and --pretty force either.`,
+		SilenceUsage:               true,
+		SilenceErrors:              true,
 		SuggestionsMinimumDistance: 2,
-		Version:                   version.Full(),
+		Version:                    version.Full(),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// If --env was passed standalone, PersistentPreRunE handles it and exits.
 			// Otherwise show help.
@@ -59,12 +68,10 @@ Use --json on any command for structured JSON output.`,
 	root.SetVersionTemplate("{{.Version}}\n")
 
 	pf := root.PersistentFlags()
-	pf.StringVar(&flagAPIKey, "api-key", "", "API key for authentication (env: CONNECT_API_KEY)")
-	pf.StringVar(&flagServer, "server", "", "Server URL (env: CONNECT_SERVER_URL)")
-	pf.StringVar(&flagJSON, "json", "", "Force JSON output; optionally select comma-separated fields")
-	pf.BoolVar(&flagPretty, "pretty", false, "Force human-readable output")
-
-	root.PersistentFlags().Lookup("json").NoOptDefVal = "*"
+	pf.StringVar(&flagAPIKey, "api-key", "", "API key (env: REDPINE_API_KEY, or CONNECT_API_KEY)")
+	pf.StringVar(&flagServer, "server", "", "Server URL (env: REDPINE_BASE_URL, or CONNECT_SERVER_URL)")
+	pf.BoolVar(&flagJSON, "json", false, "Force the JSON envelope, even in a terminal")
+	pf.BoolVar(&flagPretty, "pretty", false, "Force human-readable output, even when piped")
 
 	// Hidden env switch — not shown in help
 	pf.StringVar(&flagEnv, "env", "", "")
@@ -125,22 +132,23 @@ Use --json on any command for structured JSON output.`,
 			return nil
 		}
 
+		// A newer release is a notice on stderr, never a block: an outdated
+		// binary still works against the server, and blocking here broke
+		// scripts and offline commands like `auth set-key`.
 		cacheDir := filepath.Join(config.ConfigDir(), "cache")
-		result := update.Check(cacheDir)
-		if result != nil && result.IsOutdated {
-			return &output.CLIError{
-				Code:     "update_required",
-				Message:  result.FormatWarning(),
-				ExitCode: output.ExitError,
-			}
+		if result := update.Check(cacheDir); result != nil && result.IsOutdated {
+			fmt.Fprintln(os.Stderr, result.FormatWarning())
 		}
 
 		return nil
 	}
 
 	root.AddCommand(auth.NewAuthCmd(f))
-	root.AddCommand(collections.NewCollectionsCmd(f))
 	root.AddCommand(search.NewSearchCmd(f))
+	root.AddCommand(preview.NewPreviewCmd(f))
+	root.AddCommand(confirm.NewConfirmCmd(f))
+	root.AddCommand(collections.NewCollectionsCmd(f))
+	root.AddCommand(balance.NewBalanceCmd(f))
 	root.AddCommand(tools.NewToolsCmd(f))
 	root.AddCommand(docs.NewDocsCmd(f))
 	root.AddCommand(updatecmd.NewUpdateCmd(f))
@@ -149,9 +157,9 @@ Use --json on any command for structured JSON output.`,
 	return root
 }
 
-// shouldSkipUpdateCheck returns true for commands where the update gate
-// should not block execution (update, help, completion subcommands, and
-// Cobra's internal shell completion hooks like __complete).
+// shouldSkipUpdateCheck returns true for commands where the update notice
+// is noise (update, help, completion subcommands, and Cobra's internal
+// shell completion hooks like __complete).
 func shouldSkipUpdateCheck(cmd *cobra.Command) bool {
 	for c := cmd; c != nil; c = c.Parent() {
 		name := c.Name()
@@ -167,9 +175,8 @@ func Execute() {
 	root := NewRootCmd()
 	if err := root.Execute(); err != nil {
 		ios := output.New()
-		jsonRequested := flagJSON != ""
 		if cliErr, ok := err.(*output.CLIError); ok {
-			if jsonRequested {
+			if ios.OutputMode(flagJSON, flagPretty) == output.ModeJSON {
 				_ = ios.WriteJSON(output.NewErrorEnvelope(cliErr))
 			} else {
 				cliErr.WritePretty(ios.ErrOut)
@@ -189,7 +196,7 @@ func Execute() {
 // findSuggestions extracts a misspelled command name from the error and
 // returns suggestion text using Cobra's built-in SuggestionsFor.
 func findSuggestions(root *cobra.Command, errMsg string) string {
-	// Cobra errors look like: `unknown command "logie" for "connect"`
+	// Cobra errors look like: `unknown command "logie" for "redpine"`
 	// Extract the unknown command name
 	const prefix = "unknown command \""
 	idx := strings.Index(errMsg, prefix)

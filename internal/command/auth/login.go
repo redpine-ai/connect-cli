@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -33,7 +34,7 @@ func NewLoginCmd(f *factory.Factory) *cobra.Command {
 				return &output.CLIError{
 					Code:     "non_interactive",
 					Message:  "Cannot use browser login in non-interactive mode",
-					Hint:     "Set CONNECT_API_KEY or use 'redpine auth set-key'",
+					Hint:     "Set REDPINE_API_KEY or use 'redpine auth set-key'",
 					ExitCode: output.ExitAuth,
 				}
 			}
@@ -45,7 +46,7 @@ func NewLoginCmd(f *factory.Factory) *cobra.Command {
 
 			serverURL := f.ServerFlag
 			if serverURL == "" {
-				serverURL = os.Getenv("CONNECT_SERVER_URL")
+				serverURL = config.ServerURLFromEnv()
 			}
 			if serverURL == "" {
 				serverURL = cfg.ServerURLForEnv()
@@ -217,12 +218,9 @@ func NewLoginCmd(f *factory.Factory) *cobra.Command {
 			}
 
 			fmt.Fprintln(ios.ErrOut, "Authentication successful!")
-			if f.JSONFlag != "" {
-				return ios.WriteJSON(output.NewSuccessEnvelope(map[string]string{
-					"message": "Authenticated successfully",
-				}))
-			}
-			return nil
+			return ios.WriteResult(map[string]string{
+				"message": "Authenticated successfully",
+			}, f.JSONFlag, f.PrettyFlag, func(io.Writer) {})
 		},
 	}
 }
