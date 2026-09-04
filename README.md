@@ -78,4 +78,4 @@ Exit codes: `0` success, `1` error, `2` auth, `3` bad input, `4` server error.
 
 ## License
 
-MIT
+Apache-2.0
