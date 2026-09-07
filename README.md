@@ -36,15 +36,15 @@ redpine confirm qry_a1b2c3d4e5f6                 # unlock every previewed result
 redpine confirm qry_a1b2c3d4e5f6 abc123 def456   # unlock only these
 
 # filter — repeatable; key=value, key!=value to exclude, key>=N for ranges
-redpine search corpus "crispr" --filter issn=1664-302X
-redpine search corpus "crispr" --filter issn=1664-302X,1932-6203   # any-of
-redpine search corpus "crispr" --filter 'issn!=1932-6203'          # exclude
+redpine search corpus "crispr" --filter issn=1234-5679
+redpine search corpus "crispr" --filter issn=1234-5679,2345-6787   # any-of
+redpine search corpus "crispr" --filter 'issn!=2345-6787'          # exclude
 redpine search corpus "crispr" --filter doi=10.1345/aph.1g425      # case-insensitive
 redpine search corpus "crispr" --filter 'journal_metric.2yr_mean_citedness>=5'
 
 # full DSL for OR / nesting
 redpine search corpus "crispr" \
-  --filter-json '{"or":[{"field":"issn","eq":"1664-302X"},{"field":"issn","eq":"1932-6203"}]}'
+  --filter-json '{"or":[{"field":"issn","eq":"1234-5679"},{"field":"issn","eq":"2345-6787"}]}'
 
 # what can I search, and what do I have left?
 redpine collections

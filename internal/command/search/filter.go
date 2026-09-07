@@ -12,9 +12,9 @@ import (
 //
 // Supported forms (the API ANDs top-level keys together):
 //
-//	issn=1234-5678                          exact match
-//	issn=1234-5678,8765-4321                any-of
-//	issn!=1234-5678                         exclude
+//	issn=1234-5679                          exact match
+//	issn=1234-5679,8765-4326                any-of
+//	issn!=1234-5679                         exclude
 //	publisher!=Elsevier,Springer            exclude any-of
 //	journal_metric.2yr_mean_citedness>=5    range
 //	publication_date>=2020-01-01            range (dates auto-detected server-side)
