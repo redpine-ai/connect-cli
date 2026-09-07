@@ -22,11 +22,11 @@ func NewSearchCmd(f *factory.Factory) *cobra.Command {
   redpine search api-docs "rate limiting" --limit 5
 
   # filter by journal identity (ISSN survives title spelling variants)
-  redpine search corpus "crispr" --filter issn=1664-302X
-  redpine search corpus "crispr" --filter issn=1664-302X,1932-6203
+  redpine search corpus "crispr" --filter issn=1234-5679
+  redpine search corpus "crispr" --filter issn=1234-5679,2345-6787
 
   # exclude
-  redpine search corpus "crispr" --filter 'issn!=1932-6203'
+  redpine search corpus "crispr" --filter 'issn!=2345-6787'
   redpine search corpus "crispr" --filter 'publisher!=Elsevier'
 
   # DOI (case-insensitive; a doi.org prefix is accepted)
@@ -36,7 +36,7 @@ func NewSearchCmd(f *factory.Factory) *cobra.Command {
   redpine search corpus "crispr" --filter 'journal_metric.2yr_mean_citedness>=5'
 
   # full DSL for OR / nesting
-  redpine search corpus "crispr" --filter-json '{"or":[{"field":"issn","eq":"1664-302X"},{"field":"issn","eq":"1932-6203"}]}'`,
+  redpine search corpus "crispr" --filter-json '{"or":[{"field":"issn","eq":"1234-5679"},{"field":"issn","eq":"2345-6787"}]}'`,
 		Args: cobra.MinimumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, _ := f.Token(f.APIKeyFlag)
@@ -87,7 +87,7 @@ func NewSearchCmd(f *factory.Factory) *cobra.Command {
 			"Other fields work but are matched by scanning")
 	cmd.Flags().StringVar(&filterJSON, "filter-json", "",
 		"Raw filter object for OR / nested logic, e.g. "+
-			`'{"or":[{"field":"issn","eq":"1664-302X"}]}'`)
+			`'{"or":[{"field":"issn","eq":"1234-5679"}]}'`)
 	return cmd
 }
 

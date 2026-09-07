@@ -18,21 +18,21 @@ func TestParseFilters(t *testing.T) {
 		},
 		{
 			name:  "exact match",
-			input: []string{"issn=1664-302X"},
-			want:  map[string]interface{}{"issn": "1664-302X"},
+			input: []string{"issn=1234-5679"},
+			want:  map[string]interface{}{"issn": "1234-5679"},
 		},
 		{
 			name:  "comma separates into any-of",
-			input: []string{"issn=1664-302X,1932-6203"},
+			input: []string{"issn=1234-5679,2345-6787"},
 			want: map[string]interface{}{
-				"issn": []interface{}{"1664-302X", "1932-6203"},
+				"issn": []interface{}{"1234-5679", "2345-6787"},
 			},
 		},
 		{
 			name:  "exclusion uses the API's own not form",
-			input: []string{"issn!=1932-6203"},
+			input: []string{"issn!=2345-6787"},
 			want: map[string]interface{}{
-				"issn": map[string]interface{}{"not": "1932-6203"},
+				"issn": map[string]interface{}{"not": "2345-6787"},
 			},
 		},
 		{
@@ -67,9 +67,9 @@ func TestParseFilters(t *testing.T) {
 		},
 		{
 			name:  "several filters are ANDed as separate keys",
-			input: []string{"issn=1664-302X", "publisher=SAGE Publications"},
+			input: []string{"issn=1234-5679", "publisher=SAGE Publications"},
 			want: map[string]interface{}{
-				"issn":      "1664-302X",
+				"issn":      "1234-5679",
 				"publisher": "SAGE Publications",
 			},
 		},
@@ -85,8 +85,8 @@ func TestParseFilters(t *testing.T) {
 		},
 		{
 			name:  "trailing comma does not produce an empty term",
-			input: []string{"issn=1664-302X,"},
-			want:  map[string]interface{}{"issn": "1664-302X"},
+			input: []string{"issn=1234-5679,"},
+			want:  map[string]interface{}{"issn": "1234-5679"},
 		},
 	}
 
@@ -119,7 +119,7 @@ func TestParseFiltersErrors(t *testing.T) {
 }
 
 func TestParseFilterJSON(t *testing.T) {
-	got, err := ParseFilterJSON(`{"or":[{"field":"issn","eq":"1664-302X"}]}`)
+	got, err := ParseFilterJSON(`{"or":[{"field":"issn","eq":"1234-5679"}]}`)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

@@ -29,7 +29,7 @@ The response carries a queryId, valid for 7 days. Pass it to
 'redpine confirm' to pay for and receive the full results; pass result ids
 to confirm to unlock only some of them.`,
 		Example: `  redpine preview corpus "crispr delivery"
-  redpine preview corpus "crispr delivery" --limit 5 --filter issn=1664-302X
+  redpine preview corpus "crispr delivery" --limit 5 --filter issn=1234-5679
   redpine preview corpus "crispr delivery" --json | jq '.data'`,
 		Args: cobra.MinimumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
