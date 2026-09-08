@@ -83,3 +83,29 @@ See `CONTRIBUTING.md` for build/test/lint commands and the PR checklist.
   blocks would be silently dropped.
 - Assisted search and the quota endpoint are REST-only on the server; the CLI has no MCP
   route to them.
+
+<!-- redpine-pr-standard -->
+## Pull requests
+
+Two gates are enforced on the default branch and are not optional. They are
+Redpine's SOC2 change-management control.
+
+1. **Every PR carries exactly one `type:` label.** The `pr-type-label` status check
+   fails without it, and the PR cannot merge. Apply the label when you open the PR,
+   not afterwards:
+
+   | Label | Use for |
+   |---|---|
+   | `type:feature` | New capability or user-visible behaviour |
+   | `type:bugfix` | Corrects behaviour that was already meant to work |
+   | `type:hotfix` | Urgent production fix, expedited |
+   | `type:chore` | Dependencies, tooling, refactors, config, release plumbing |
+   | `type:docs` | Documentation, runbooks, changelog |
+   | `type:security` | Vulnerability fix, hardening, secret rotation |
+
+2. **Every PR is approved by someone other than its author.** Self-merge is blocked
+   for everyone, repository admins included. An automated review is useful evidence
+   but does not satisfy this gate; a human other than the author must approve.
+
+If you are an agent opening a PR: apply the `type:` label in the same command that
+creates the PR (`gh pr create --label type:...`), and never merge your own PR.
