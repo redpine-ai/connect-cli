@@ -1,17 +1,29 @@
+# Dependabot policy: SECURITY UPDATES ONLY.
+#
+# `open-pull-requests-limit: 0` switches off scheduled *version* updates for the
+# ecosystem. Security updates are explicitly exempt from that limit, so
+# Dependabot still opens a PR for every open Dependabot alert with a patch.
+# See docs.github.com/code-security/dependabot/working-with-dependabot/dependabot-options-reference
+#
+# `labels` applies to security-update PRs too, which is the point: `pr-type-label`
+# is a required check and Dependabot applies no `type:` label of its own, so
+# without this every Dependabot PR is unmergeable and gets closed unread.
+# The label is scoped per `package-ecosystem`/`directory` entry, so EVERY manifest
+# directory in the repo needs an entry here even though version updates are off.
+#
+# If scheduled version updates are ever turned back on (limit > 0), revisit the
+# label: `type:security` would then be wrong for routine bumps.
 version: 2
 updates:
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
       interval: "monthly"
-    open-pull-requests-limit: 5
-    groups:
-      go-deps:
-        patterns: ["*"]
+    open-pull-requests-limit: 0
+    labels: ["type:security", "dependencies"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "monthly"
-    groups:
-      actions-deps:
-        patterns: ["*"]
+    open-pull-requests-limit: 0
+    labels: ["type:security", "dependencies"]
